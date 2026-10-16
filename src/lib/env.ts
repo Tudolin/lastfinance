@@ -5,39 +5,48 @@ const bool = z
   .optional()
   .transform((v) => v === 'true' || v === '1');
 
-const schema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  DATABASE_URL: z.string().url(),
-  DATABASE_URL_UNPOOLED: z.string().url().optional(),
-  APP_URL: z.string().url().optional(),
-  VERCEL_URL: z.string().optional(),
-  VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
-  VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
+const schema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    DATABASE_URL: z.string().url(),
+    DATABASE_URL_UNPOOLED: z.string().url().optional(),
+    APP_URL: z.string().url().optional(),
+    VERCEL_URL: z.string().optional(),
+    VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
+    VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
 
-  SESSION_SECRET: z.string().min(32, 'SESSION_SECRET precisa de pelo menos 32 caracteres'),
-  DATA_ENCRYPTION_KEY: z
-    .string()
-    .refine(
-      (v) => Buffer.from(v, 'base64').length === 32,
-      'DATA_ENCRYPTION_KEY: 32 bytes em base64',
-    ),
-  SETUP_TOKEN: z.string().min(16).optional(),
+    SESSION_SECRET: z.string().min(32, 'SESSION_SECRET precisa de pelo menos 32 caracteres'),
+    DATA_ENCRYPTION_KEY: z
+      .string()
+      .refine(
+        (v) => Buffer.from(v, 'base64').length === 32,
+        'DATA_ENCRYPTION_KEY: 32 bytes em base64',
+      ),
+    SETUP_TOKEN: z.string().min(16).optional(),
 
-  PLUGGY_CLIENT_ID: z.string().optional(),
-  PLUGGY_CLIENT_SECRET: z.string().optional(),
-  PLUGGY_WEBHOOK_SECRET: z.string().min(24).optional(),
-  PLUGGY_WEBHOOK_IP_ALLOWLIST: z.string().optional(),
-  PLUGGY_FAKE: bool,
+    PLUGGY_CLIENT_ID: z.string().optional(),
+    PLUGGY_CLIENT_SECRET: z.string().optional(),
+    PLUGGY_WEBHOOK_SECRET: z.string().min(24).optional(),
+    PLUGGY_WEBHOOK_IP_ALLOWLIST: z.string().optional(),
+    PLUGGY_FAKE: bool,
 
-  ANTHROPIC_API_KEY: z.string().optional(),
-  /** Modelo padrão da camada de IA. */
-  AI_MODEL: z.string().default('claude-haiku-5-5'),
-  /** true = IA falsa e determinística (dev/testes, sem custo). */
-  AI_FAKE: bool,
+    ANTHROPIC_API_KEY: z.string().optional(),
+    /** Modelo padrão da camada de IA. */
+    AI_MODEL: z.string().default('claude-haiku-5-5'),
+    /** true = IA falsa e determinística (dev/testes, sem custo). */
+    AI_FAKE: bool,
 
-  JOBS_MODE: z.enum(['inngest', 'inline']).default('inngest'),
-  CRON_SECRET: z.string().min(16).optional(),
-});
+    JOBS_MODE: z.enum(['inngest', 'inline']).default('inngest'),
+    INNGEST_EVENT_KEY: z.string().optional(),
+    INNGEST_SIGNING_KEY: z.string().optional(),
+    CRON_SECRET: z.string().min(16).optional(),
+  })
+  // Em produção na Vercel a fila é o Inngest: sem as chaves, importar/sincronizar falharia.
+  .superRefine((e, ctx) => {
+    if (e.VERCEL_ENV !== 'production' || e.JOBS_MODE !== 'inngest') return;
+    for (const k of ['INNGEST_EVENT_KEY', 'INNGEST_SIGNING_KEY'] as const)
+      if (!e[k]) ctx.addIssue({ code: 'custom', path: [k], message: 'obrigatória em produção' });
+  });
 
 export type Env = z.infer<typeof schema> & { appUrl: string };
 
@@ -50,6 +59,8 @@ const HINTS: Record<string, string> = {
   SETUP_TOKEN: 'gere com: openssl rand -hex 16',
   CRON_SECRET: 'gere com: openssl rand -hex 16',
   PLUGGY_WEBHOOK_SECRET: 'gere com: openssl rand -hex 32',
+  INNGEST_EVENT_KEY: 'conecte a integração Inngest em Integrations (cria as duas chaves)',
+  INNGEST_SIGNING_KEY: 'conecte a integração Inngest em Integrations (cria as duas chaves)',
 };
 
 /** Lista os problemas das variáveis (nome + regra + dica), sem nunca incluir os valores. */
