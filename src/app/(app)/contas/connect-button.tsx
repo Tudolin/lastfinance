@@ -125,8 +125,12 @@ export function SyncButtons({ pluggyItemId }: { pluggyItemId: string }) {
           disabled={pending}
           onClick={() =>
             start(async () => {
-              await syncNowAction(pluggyItemId);
-              setMsg({ tone: 'ok', text: 'Sincronização iniciada.' });
+              const r = await syncNowAction(pluggyItemId);
+              setMsg(
+                r.ok
+                  ? { tone: 'ok', text: 'Sincronização iniciada.' }
+                  : { tone: 'err', text: r.error },
+              );
               router.refresh();
             })
           }

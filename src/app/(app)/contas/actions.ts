@@ -105,7 +105,15 @@ export async function requestUpdateAction(pluggyItemId: string): Promise<Result>
       error: `A última atualização foi há menos de ${MIN_MANUAL_UPDATE_MINUTES} minutos. Aguarde para não gastar a cota do Open Finance.`,
     };
   }
-  await (await getPluggy()).requestItemUpdate(pluggyItemId);
+  try {
+    await (await getPluggy()).requestItemUpdate(pluggyItemId);
+  } catch {
+    return {
+      ok: false,
+      error:
+        'A Pluggy recusou a atualização. Se a conexão foi recriada, ela pode não existir mais na Pluggy.',
+    };
+  }
   await audit(s.user.id, 'connection.update_requested', { itemId: pluggyItemId });
   return { ok: true };
 }
