@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sem conexão · lastfinance</title>
+    <style>
+      :root {
+        --bg: #f4f5f1;
+        --ink: #15201b;
+        --ink2: #4a5650;
+        --btn: #0b6e55;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e1512;
+          --ink: #e8eeea;
+          --ink2: #a9b5ae;
+          --btn: #2e9a78;
+        }
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: system-ui, sans-serif;
+        padding: 16px;
+        box-sizing: border-box;
+        text-align: center;
+      }
+      main {
+        max-width: 360px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+      }
+      h1 {
+        margin: 0;
+        font-size: 22px;
+      }
+      p {
+        margin: 0;
+        color: var(--ink2);
+        line-height: 1.5;
+      }
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        padding: 0 20px;
+        border-radius: 12px;
+        background: var(--btn);
+        color: #fff;
+        font-weight: 700;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Sem conexão</h1>
+      <p>
+        Por segurança, o lastfinance não guarda seus dados no aparelho. Conecte-se à internet para
+        ver suas finanças.
+      </p>
+      <a href="/">Tentar de novo</a>
+    </main>
+  </body>
+</html>
