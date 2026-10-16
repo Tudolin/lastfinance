@@ -9,12 +9,13 @@ import type { PluggyAccount, PluggyTransaction } from '@/server/adapters/pluggy/
 import { hashDocument } from '@/server/security/crypto';
 
 /**
- * A Pluggy manda datas de transação como instante. Quando vem meia-noite UTC exata, é uma data
- * "pura" (sem hora) e usamos o dia UTC; com hora, convertemos para o fuso de São Paulo.
+ * A Pluggy manda datas de transação como instante. Meia-noite UTC (inclusive com alguns
+ * milissegundos, como o Nubank manda: `00:00:00.001Z`) é uma data "pura", sem hora, e usamos o
+ * dia UTC; com hora de verdade, convertemos para o fuso de São Paulo.
  */
 export function pluggyDateToLocal(d: Date): LocalDate {
   const iso = d.toISOString();
-  if (iso.endsWith('T00:00:00.000Z')) return iso.slice(0, 10) as LocalDate;
+  if (/T00:00:00\.\d{3}Z$/.test(iso)) return iso.slice(0, 10) as LocalDate;
   return toLocalDateSP(d);
 }
 
@@ -80,9 +81,6 @@ export function mapTransaction(t: PluggyTransaction, acc: { id: string; kind: Ac
   const date = pluggyDateToLocal(t.date);
   const amountCents = signedAmountCents(acc.kind, t.type, t.amount);
   const inst = resolveInstallment(t.creditCardMetadata, t.description);
-  const purchase = t.creditCardMetadata?.purchaseDate
-    ? pluggyDateToLocal(t.creditCardMetadata.purchaseDate)
-    : date;
   const counterpartyDoc =
     amountCents < 0
       ? t.paymentData?.receiver?.documentNumber?.value
@@ -103,7 +101,9 @@ export function mapTransaction(t: PluggyTransaction, acc: { id: string; kind: Ac
     status: t.status,
     operationType: t.operationType,
     date,
-    competenceDate: acc.kind === 'credit_card' ? purchase : date,
+    // Competência é a data da transação. Em parcelas, `purchaseDate` é a data da compra original
+    // (vem só nelas); usá-la jogaria todas as parcelas no mês da compra.
+    competenceDate: date,
     cashDate: date,
     pluggyBillId: t.creditCardMetadata?.billId ?? null,
     installmentNumber: inst?.number ?? null,
