@@ -64,6 +64,11 @@ export const pluggyAccountSchema = z.object({
   marketingName: nullableStr,
   taxNumber: nullableStr,
   currencyCode: z.string().default('BRL'),
+  bankData: z
+    .object({ transferNumber: nullableStr })
+    .nullable()
+    .optional()
+    .transform((v) => v ?? null),
   creditData: z
     .object({
       balanceCloseDate: nullableDate,

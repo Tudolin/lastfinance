@@ -35,6 +35,52 @@ export function maskNumber(n: string | null): string | null {
   return digits ? digits.slice(-4) : null;
 }
 
+/** Conector "MeuPluggy" (uso pessoal): o item é sempre "MeuPluggy", um por banco conectado em meu.pluggy.ai. */
+export const MEU_PLUGGY_CONNECTOR_ID = 200;
+
+export function isMeuPluggy(connector: { id: number; name: string }): boolean {
+  return connector.id === MEU_PLUGGY_CONNECTOR_ID || connector.name === 'MeuPluggy';
+}
+
+/** Código COMPE → nome do banco (só os mais comuns; o resto continua como "MeuPluggy"). */
+const BANKS_BY_COMPE: Record<string, string> = {
+  '001': 'Banco do Brasil',
+  '033': 'Santander',
+  '077': 'Inter',
+  '102': 'XP',
+  '104': 'Caixa',
+  '208': 'BTG Pactual',
+  '212': 'Banco Original',
+  '237': 'Bradesco',
+  '260': 'Nubank',
+  '290': 'PagBank',
+  '323': 'Mercado Pago',
+  '336': 'C6 Bank',
+  '341': 'Itaú',
+  '380': 'PicPay',
+  '422': 'Safra',
+  '655': 'Votorantim',
+  '748': 'Sicredi',
+  '756': 'Sicoob',
+};
+
+/**
+ * Nome real do banco de um item MeuPluggy, pelo código COMPE no início do `transferNumber`
+ * das contas ("341/0001/12345-6"). Null quando não dá para deduzir.
+ */
+export function institutionFromAccounts(
+  accounts: Pick<PluggyAccount, 'type' | 'bankData'>[],
+): string | null {
+  for (const a of accounts) {
+    if (a.type !== 'BANK') continue;
+    const head = (a.bankData?.transferNumber ?? '').split('/')[0]!.replace(/\D/g, '');
+    if (!head) continue;
+    const name = BANKS_BY_COMPE[String(Number(head)).padStart(3, '0')];
+    if (name) return name;
+  }
+  return null;
+}
+
 export function mapAccount(a: PluggyAccount) {
   const kind = accountKindOf(a);
   const cd = a.creditData;
