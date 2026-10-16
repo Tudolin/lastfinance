@@ -96,3 +96,36 @@ describe('MeuPluggy', () => {
     expect(institutionFromAccounts([bank(null)])).toBeNull();
   });
 });
+
+describe('paymentData com nulos (Open Finance)', () => {
+  const base = {
+    id: 't1',
+    accountId: 'p-acc',
+    date: '2026-10-10T00:00:00.000Z',
+    description: 'PIX',
+    descriptionRaw: null,
+    type: 'DEBIT',
+    amount: 10,
+    currencyCode: 'BRL',
+    providerCode: null,
+    providerId: null,
+    operationType: null,
+  };
+
+  it('aceita payer nulo e name nulo', () => {
+    const t = pluggyTransactionSchema.parse({
+      ...base,
+      paymentData: {
+        payer: null,
+        receiver: { name: null, documentNumber: { value: null, type: null } },
+        paymentMethod: null,
+      },
+      creditCardMetadata: { installmentNumber: null, purchaseDate: null, billId: null },
+    });
+    expect(t.paymentData?.payer).toBeUndefined();
+    expect(t.paymentData?.receiver?.name).toBeUndefined();
+    expect(t.creditCardMetadata?.purchaseDate).toBeUndefined();
+    const m = mapTransaction(t, { id: 'acc-1', kind: 'checking' });
+    expect(m).toBeTruthy();
+  });
+});

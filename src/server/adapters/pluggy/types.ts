@@ -83,15 +83,20 @@ export const pluggyAccountSchema = z.object({
 });
 export type PluggyAccount = z.output<typeof pluggyAccountSchema>;
 
-const participant = z
-  .object({
-    documentNumber: z
-      .object({ value: z.string().optional(), type: z.string().optional() })
-      .optional(),
-    name: z.string().optional(),
-  })
-  .passthrough()
-  .optional();
+/** Campo opcional que a Pluggy às vezes manda como `null` (Open Finance): vira `undefined`. */
+const opt = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((v) => (v === null ? undefined : v), schema.optional());
+
+const participant = opt(
+  z
+    .object({
+      documentNumber: opt(
+        z.object({ value: opt(z.string()), type: opt(z.string()) }).passthrough(),
+      ),
+      name: opt(z.string()),
+    })
+    .passthrough(),
+);
 
 export const pluggyTransactionSchema = z.object({
   id: z.string(),
@@ -107,18 +112,18 @@ export const pluggyTransactionSchema = z.object({
   providerId: nullableStr,
   operationType: nullableStr,
   paymentData: z
-    .object({ payer: participant, receiver: participant, paymentMethod: z.string().optional() })
+    .object({ payer: participant, receiver: participant, paymentMethod: opt(z.string()) })
     .passthrough()
     .nullable()
     .optional()
     .transform((v) => v ?? null),
   creditCardMetadata: z
     .object({
-      installmentNumber: z.number().optional(),
-      totalInstallments: z.number().optional(),
-      totalAmount: z.number().optional(),
-      purchaseDate: dateLike.optional(),
-      billId: z.string().optional(),
+      installmentNumber: opt(z.number()),
+      totalInstallments: opt(z.number()),
+      totalAmount: opt(z.number()),
+      purchaseDate: opt(dateLike),
+      billId: opt(z.string()),
     })
     .passthrough()
     .nullable()
