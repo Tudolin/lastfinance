@@ -2,6 +2,8 @@ import 'server-only';
 import { and, eq, gte, inArray, isNotNull, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
 import { inferCycleConfig } from '@/domain/cards/billing-cycle';
 import {
+  institutionFromAccounts,
+  isMeuPluggy,
   mapAccount,
   mapTransaction,
   pluggyDateToLocal,
@@ -52,10 +54,15 @@ function connectionValues(item: PluggyItem) {
 export async function refreshConnection(pluggyItemId: string) {
   const item = await (await getPluggy()).fetchItem(pluggyItemId);
   const values = connectionValues(item);
+  // No MeuPluggy o nome real do banco vem das contas (syncAccounts); não volta a ser "MeuPluggy".
+  const { connectorName: _name, ...keepName } = values;
   const [row] = await getDb()
     .insert(institutionConnection)
     .values(values)
-    .onConflictDoUpdate({ target: institutionConnection.pluggyItemId, set: values })
+    .onConflictDoUpdate({
+      target: institutionConnection.pluggyItemId,
+      set: isMeuPluggy(item.connector) ? keepName : values,
+    })
     .returning();
   return row!;
 }
@@ -84,6 +91,15 @@ export async function syncAccounts(connectionId: string): Promise<SyncedAccount[
   if (!conn) throw new Error('Conexão não encontrada');
   const remote = await (await getPluggy()).fetchAccounts(conn.pluggyItemId);
   const out: SyncedAccount[] = [];
+
+  if (isMeuPluggy({ id: conn.connectorId, name: conn.connectorName })) {
+    const bank = institutionFromAccounts(remote);
+    if (bank && bank !== conn.connectorName)
+      await db
+        .update(institutionConnection)
+        .set({ connectorName: bank })
+        .where(eq(institutionConnection.id, conn.id));
+  }
 
   for (const a of remote) {
     const v = mapAccount(a);

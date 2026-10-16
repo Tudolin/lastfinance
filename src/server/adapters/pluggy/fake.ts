@@ -203,6 +203,7 @@ export class FakePluggy implements PluggyGateway {
       marketingName: null,
       taxNumber: FAKE_OWN_CPF,
       currencyCode: 'BRL',
+      bankData: { transferNumber: isNu ? '260/0001/1234567-8' : '341/1234/56789-0' },
       creditData: null,
     });
     this.accounts.set(card, {
@@ -216,6 +217,7 @@ export class FakePluggy implements PluggyGateway {
       marketingName: null,
       taxNumber: FAKE_OWN_CPF,
       currencyCode: 'BRL',
+      bankData: null,
       creditData: {
         balanceCloseDate: at(
           clampedDate(parts(this.today).year, parts(this.today).month, closingDay),

@@ -94,7 +94,11 @@ export default async function AccountsPage() {
                   <div>
                     <dt className="font-semibold text-ink-2">Histórico</dt>
                     <dd className="font-extrabold">
-                      {c.backfillState === 'done' ? '12 meses carregados' : 'carregando…'}
+                      {c.backfillState === 'done'
+                        ? '12 meses carregados'
+                        : c.lastSyncedAt
+                          ? 'carregando…'
+                          : 'aguardando a 1ª sincronização'}
                     </dd>
                   </div>
                   <div>
