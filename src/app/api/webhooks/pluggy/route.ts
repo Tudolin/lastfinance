@@ -20,7 +20,8 @@ export async function POST(req: Request) {
   if (!auth.ok) return NextResponse.json({ error: 'unauthorized' }, { status: auth.status });
 
   const text = await req.text();
-  if (text.length > MAX_BODY) return NextResponse.json({ error: 'payload too large' }, { status: 413 });
+  if (text.length > MAX_BODY)
+    return NextResponse.json({ error: 'payload too large' }, { status: 413 });
 
   let body: unknown;
   try {
@@ -33,7 +34,8 @@ export async function POST(req: Request) {
     const r = await ingestWebhook(body);
     return NextResponse.json({ ok: true, status: r.status }, { status: 200 });
   } catch (err) {
-    if (err instanceof ZodError) return NextResponse.json({ error: 'invalid payload' }, { status: 400 });
+    if (err instanceof ZodError)
+      return NextResponse.json({ error: 'invalid payload' }, { status: 400 });
     log.error('falha ao gravar webhook', err);
     return NextResponse.json({ error: 'internal' }, { status: 500 });
   }

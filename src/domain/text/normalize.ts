@@ -1,15 +1,11 @@
 /** Remove acentos, padroniza caixa e espaços. */
 export function foldText(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toUpperCase()
-    .replace(/\s+/g, ' ')
-    .trim();
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
 }
 
 // Prefixos de adquirentes/subadquirentes que não identificam o estabelecimento.
-const ACQUIRER_PREFIX = /^(?:PG ?\*|PAG\*|MP ?\*|MERCADOPAGO ?\*|EC ?\*|IFD ?\*|PAYPAL ?\*|SUMUP ?\*|STONE ?\*|PICPAY ?\*|EBANX ?\*|DL ?\*|EBN ?\*|HTM ?\*|APM ?\*|GOOGLE ?\*|ZP ?\*|PAGSEGURO ?\*)\s*/;
+const ACQUIRER_PREFIX =
+  /^(?:PG ?\*|PAG\*|MP ?\*|MERCADOPAGO ?\*|EC ?\*|IFD ?\*|PAYPAL ?\*|SUMUP ?\*|STONE ?\*|PICPAY ?\*|EBANX ?\*|DL ?\*|EBN ?\*|HTM ?\*|APM ?\*|GOOGLE ?\*|ZP ?\*|PAGSEGURO ?\*)\s*/;
 
 /**
  * Descrição normalizada para agrupar o mesmo estabelecimento:
@@ -29,8 +25,16 @@ export function normalizeDescription(raw: string): string {
 
 /** Similaridade de Jaccard sobre tokens (0..1). */
 export function tokenSimilarity(a: string, b: string): number {
-  const ta = new Set(normalizeDescription(a).split(' ').filter((t) => t.length > 1));
-  const tb = new Set(normalizeDescription(b).split(' ').filter((t) => t.length > 1));
+  const ta = new Set(
+    normalizeDescription(a)
+      .split(' ')
+      .filter((t) => t.length > 1),
+  );
+  const tb = new Set(
+    normalizeDescription(b)
+      .split(' ')
+      .filter((t) => t.length > 1),
+  );
   if (ta.size === 0 || tb.size === 0) return 0;
   let inter = 0;
   for (const t of ta) if (tb.has(t)) inter++;

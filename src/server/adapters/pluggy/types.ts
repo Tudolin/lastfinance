@@ -5,11 +5,24 @@ import { z } from 'zod';
  * para que mudanças na API quebrem aqui — com erro claro — e não no meio do sync.
  * Datas chegam como Date (o SDK converte) ou string ISO.
  */
-const dateLike = z.union([z.date(), z.string()]).transform((v) => (v instanceof Date ? v : new Date(v)));
-const nullableDate = dateLike.nullable().optional().transform((v) => v ?? null);
+const dateLike = z
+  .union([z.date(), z.string()])
+  .transform((v) => (v instanceof Date ? v : new Date(v)));
+const nullableDate = dateLike
+  .nullable()
+  .optional()
+  .transform((v) => v ?? null);
 const num = z.number();
-const nullableNum = z.number().nullable().optional().transform((v) => v ?? null);
-const nullableStr = z.string().nullable().optional().transform((v) => v ?? null);
+const nullableNum = z
+  .number()
+  .nullable()
+  .optional()
+  .transform((v) => v ?? null);
+const nullableStr = z
+  .string()
+  .nullable()
+  .optional()
+  .transform((v) => v ?? null);
 
 export const pluggyItemSchema = z.object({
   id: z.string(),
@@ -17,11 +30,18 @@ export const pluggyItemSchema = z.object({
     id: z.number(),
     name: z.string(),
     imageUrl: nullableStr,
-    isOpenFinance: z.boolean().nullable().optional().transform((v) => v ?? false),
+    isOpenFinance: z
+      .boolean()
+      .nullable()
+      .optional()
+      .transform((v) => v ?? false),
   }),
   status: z.string(),
   executionStatus: nullableStr,
-  statusDetail: z.unknown().optional().transform((v) => v ?? null),
+  statusDetail: z
+    .unknown()
+    .optional()
+    .transform((v) => v ?? null),
   error: z
     .object({ code: z.string(), message: z.string().nullable().optional() })
     .nullable()
@@ -60,7 +80,9 @@ export type PluggyAccount = z.output<typeof pluggyAccountSchema>;
 
 const participant = z
   .object({
-    documentNumber: z.object({ value: z.string().optional(), type: z.string().optional() }).optional(),
+    documentNumber: z
+      .object({ value: z.string().optional(), type: z.string().optional() })
+      .optional(),
     name: z.string().optional(),
   })
   .passthrough()
@@ -106,7 +128,11 @@ export const pluggyBillSchema = z.object({
   billClosingDate: nullableDate,
   totalAmount: num,
   minimumPaymentAmount: nullableNum,
-  allowsInstallments: z.boolean().nullable().optional().transform((v) => v ?? null),
+  allowsInstallments: z
+    .boolean()
+    .nullable()
+    .optional()
+    .transform((v) => v ?? null),
   financeCharges: z.array(z.object({ type: z.string(), amount: num }).passthrough()).default([]),
   payments: z
     .array(z.object({ paymentDate: dateLike, amount: num, valueType: z.string() }).passthrough())
@@ -146,7 +172,12 @@ export const pluggyInvestmentTxSchema = z.object({
 });
 export type PluggyInvestmentTx = z.output<typeof pluggyInvestmentTxSchema>;
 
-export type TransactionQuery = { dateFrom?: string; createdAtFrom?: string; ids?: string[]; after?: string | null };
+export type TransactionQuery = {
+  dateFrom?: string;
+  createdAtFrom?: string;
+  ids?: string[];
+  after?: string | null;
+};
 export type TransactionPage = { results: PluggyTransaction[]; next: string | null };
 
 /** Porta para a Pluggy. Implementações: SDK real (`client.ts`) e fake determinístico (`fake.ts`). */

@@ -8,7 +8,11 @@ import { normalizeDescription } from '../text/normalize';
  * - Conta: o tipo manda (CREDIT = entrada, DEBIT = saída).
  * - Cartão: na Pluggy, valor positivo é compra e negativo é pagamento/crédito; invertemos.
  */
-export function signedAmountCents(accountKind: AccountKind, type: 'DEBIT' | 'CREDIT', amount: number): Cents {
+export function signedAmountCents(
+  accountKind: AccountKind,
+  type: 'DEBIT' | 'CREDIT',
+  amount: number,
+): Cents {
   const abs = Math.abs(toCents(amount));
   if (accountKind === 'credit_card') {
     if (amount === 0) return 0;
@@ -21,7 +25,12 @@ export function signedAmountCents(accountKind: AccountKind, type: 'DEBIT' | 'CRE
  * Impressão digital para reconhecer a "mesma" transação quando a Pluggy troca o id
  * (mudança grande de data/valor/descrição ou item reconectado).
  */
-export function transactionFingerprint(accountId: string, date: LocalDate, amountCents: Cents, description: string): string {
+export function transactionFingerprint(
+  accountId: string,
+  date: LocalDate,
+  amountCents: Cents,
+  description: string,
+): string {
   return `${accountId}|${date}|${amountCents}|${normalizeDescription(description)}`;
 }
 

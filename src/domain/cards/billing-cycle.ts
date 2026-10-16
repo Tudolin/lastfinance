@@ -54,7 +54,9 @@ export function assignToKnownBill(purchase: LocalDate, bills: readonly BillRef[]
  * Deduz dia de fechamento/vencimento a partir de faturas reais (moda dos dias) — usado quando a
  * conta não informa `balanceCloseDate`/`balanceDueDate`.
  */
-export function inferCycleConfig(bills: readonly { closingDate: LocalDate | null; dueDate: LocalDate }[]): CardCycleConfig | null {
+export function inferCycleConfig(
+  bills: readonly { closingDate: LocalDate | null; dueDate: LocalDate }[],
+): CardCycleConfig | null {
   const mode = (xs: number[]) => {
     const c = new Map<number, number>();
     for (const x of xs) c.set(x, (c.get(x) ?? 0) + 1);

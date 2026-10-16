@@ -25,8 +25,13 @@ describe('parcelas', () => {
   });
 
   it('prefere o metadado da Pluggy', () => {
-    expect(resolveInstallment({ installmentNumber: 4, totalInstallments: 5 }, 'LOJA 1/2')).toEqual({ number: 4, total: 5 });
-    expect(resolveInstallment({ installmentNumber: null, totalInstallments: null }, 'LOJA 1/2')).toEqual({ number: 1, total: 2 });
+    expect(resolveInstallment({ installmentNumber: 4, totalInstallments: 5 }, 'LOJA 1/2')).toEqual({
+      number: 4,
+      total: 5,
+    });
+    expect(
+      resolveInstallment({ installmentNumber: null, totalInstallments: null }, 'LOJA 1/2'),
+    ).toEqual({ number: 1, total: 2 });
     expect(resolveInstallment(null, 'LOJA')).toBeNull();
   });
 });

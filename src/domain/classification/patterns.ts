@@ -43,7 +43,14 @@ const INVESTMENT_OUT = [
 
 const TRANSFER = [/\bPIX\b/, /\bTED\b/, /\bDOC\b/, /\bTRANSF(?:ERENCIA)?\b/, /\bTEF\b/];
 
-const REFUND = [/\bESTORNO\b/, /\bDEVOLUCAO\b/, /\bREEMBOLSO\b/, /\bCHARGEBACK\b/, /\bCREDITO\s+DE\s+COMPRA\b/, /\bCANCELAMENTO\b/];
+const REFUND = [
+  /\bESTORNO\b/,
+  /\bDEVOLUCAO\b/,
+  /\bREEMBOLSO\b/,
+  /\bCHARGEBACK\b/,
+  /\bCREDITO\s+DE\s+COMPRA\b/,
+  /\bCANCELAMENTO\b/,
+];
 
 const any = (patterns: RegExp[], s: string) => patterns.some((p) => p.test(s));
 
@@ -62,7 +69,8 @@ export const looksLikeInvestmentIn = (d: string) => {
   const s = foldText(d);
   return any(INVESTMENT_IN, s) && !any(INVESTMENT_OUT, s);
 };
-const INVESTMENT_WORD = /\b(?:RDB|CDB|LCI|LCA|CAIXINHA|COFRINHO|APLIC(?:ACAO)?|INVEST(?:IMENTO)?|AUT(?:OMATICO)?)\b|DINHEIRO RESGATADO|RETIRAD[OA] DA CAIXINHA/;
+const INVESTMENT_WORD =
+  /\b(?:RDB|CDB|LCI|LCA|CAIXINHA|COFRINHO|APLIC(?:ACAO)?|INVEST(?:IMENTO)?|AUT(?:OMATICO)?)\b|DINHEIRO RESGATADO|RETIRAD[OA] DA CAIXINHA/;
 export const looksLikeInvestmentOut = (d: string) => {
   const s = foldText(d);
   return any(INVESTMENT_OUT, s) && INVESTMENT_WORD.test(s);

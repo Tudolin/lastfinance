@@ -1,5 +1,12 @@
 import 'server-only';
-import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from 'node:crypto';
 import { env } from '@/lib/env';
 
 const KEY_VERSION = 'v1';
@@ -13,15 +20,23 @@ export function encrypt(plain: string): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', dataKey(), iv);
   const ct = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
-  return [KEY_VERSION, iv.toString('base64url'), cipher.getAuthTag().toString('base64url'), ct.toString('base64url')].join(':');
+  return [
+    KEY_VERSION,
+    iv.toString('base64url'),
+    cipher.getAuthTag().toString('base64url'),
+    ct.toString('base64url'),
+  ].join(':');
 }
 
 export function decrypt(payload: string): string {
   const [version, iv, tag, ct] = payload.split(':');
-  if (version !== KEY_VERSION || !iv || !tag || !ct) throw new Error('Formato de dado cifrado inválido');
+  if (version !== KEY_VERSION || !iv || !tag || !ct)
+    throw new Error('Formato de dado cifrado inválido');
   const decipher = createDecipheriv('aes-256-gcm', dataKey(), Buffer.from(iv, 'base64url'));
   decipher.setAuthTag(Buffer.from(tag, 'base64url'));
-  return Buffer.concat([decipher.update(Buffer.from(ct, 'base64url')), decipher.final()]).toString('utf8');
+  return Buffer.concat([decipher.update(Buffer.from(ct, 'base64url')), decipher.final()]).toString(
+    'utf8',
+  );
 }
 
 export function sha256(s: string): string {

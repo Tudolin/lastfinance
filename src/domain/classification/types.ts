@@ -79,14 +79,15 @@ export type ClassifyInput = {
 };
 
 /** Efeito de cada kind nas agregações. */
-export const KIND_EFFECT: Record<TxKind, { expense: boolean; income: boolean; invested: boolean }> = {
-  expense: { expense: true, income: false, invested: false },
-  income: { expense: false, income: true, invested: false },
-  internal_transfer: { expense: false, income: false, invested: false },
-  investment_in: { expense: false, income: false, invested: true },
-  investment_out: { expense: false, income: false, invested: true },
-  card_payment: { expense: false, income: false, invested: false },
-  // O estorno abate despesa (entra com sinal positivo na categoria original).
-  refund: { expense: true, income: false, invested: false },
-  adjustment: { expense: false, income: false, invested: false },
-};
+export const KIND_EFFECT: Record<TxKind, { expense: boolean; income: boolean; invested: boolean }> =
+  {
+    expense: { expense: true, income: false, invested: false },
+    income: { expense: false, income: true, invested: false },
+    internal_transfer: { expense: false, income: false, invested: false },
+    investment_in: { expense: false, income: false, invested: true },
+    investment_out: { expense: false, income: false, invested: true },
+    card_payment: { expense: false, income: false, invested: false },
+    // O estorno abate despesa (entra com sinal positivo na categoria original).
+    refund: { expense: true, income: false, invested: false },
+    adjustment: { expense: false, income: false, invested: false },
+  };

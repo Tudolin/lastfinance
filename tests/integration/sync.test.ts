@@ -10,7 +10,14 @@ import { runItemSync } from '@/server/services/item-sync';
 import { postprocess } from '@/server/services/postprocess';
 import { createTestDb } from './helpers/db';
 
-const { transaction: tx, account, creditCardBill, investment, syncLog, institutionConnection } = schema;
+const {
+  transaction: tx,
+  account,
+  creditCardBill,
+  investment,
+  syncLog,
+  institutionConnection,
+} = schema;
 
 let db: Db;
 let close: () => Promise<void>;
@@ -46,7 +53,10 @@ describe('carga histórica', () => {
     expect(rows.length).toBe(fake.txs.size);
     expect(new Set(rows.map((r) => r.pluggyId)).size).toBe(rows.length);
 
-    const [conn] = await db.select().from(institutionConnection).where(eq(institutionConnection.pluggyItemId, 'fake-item-itau'));
+    const [conn] = await db
+      .select()
+      .from(institutionConnection)
+      .where(eq(institutionConnection.pluggyItemId, 'fake-item-itau'));
     expect(conn!.backfillState).toBe('done');
     const logs = await db.select().from(syncLog);
     expect(logs.every((l) => l.status === 'success')).toBe(true);
@@ -56,10 +66,16 @@ describe('carga histórica', () => {
   it('é idempotente: rodar de novo não muda nada', async () => {
     await sync('fake-item-itau');
     await sync('fake-item-nubank');
-    const before = await db.select({ id: tx.id, kind: tx.kind, cash: tx.cashDate }).from(tx).orderBy(tx.id);
+    const before = await db
+      .select({ id: tx.id, kind: tx.kind, cash: tx.cashDate })
+      .from(tx)
+      .orderBy(tx.id);
     await sync('fake-item-itau', 'incremental');
     await sync('fake-item-nubank', 'incremental');
-    const after = await db.select({ id: tx.id, kind: tx.kind, cash: tx.cashDate }).from(tx).orderBy(tx.id);
+    const after = await db
+      .select({ id: tx.id, kind: tx.kind, cash: tx.cashDate })
+      .from(tx)
+      .orderBy(tx.id);
     expect(after).toEqual(before);
   });
 
@@ -77,18 +93,28 @@ describe('carga histórica', () => {
       expect(peer?.srcDescription).toBe('Transferência recebida pelo Pix');
     }
 
-    for (const p of by((r) => r.srcDescription === 'Pagamento de fatura' || r.srcDescription.startsWith('ITAU CARTOES'))) {
+    for (const p of by(
+      (r) =>
+        r.srcDescription === 'Pagamento de fatura' || r.srcDescription.startsWith('ITAU CARTOES'),
+    )) {
       expect(p.kind).toBe('card_payment');
       expect(p.paidBillId).not.toBeNull();
     }
-    for (const p of by((r) => r.srcDescription === 'Pagamento recebido')) expect(p.kind).toBe('card_payment');
-    for (const p of by((r) => r.srcDescription === 'Aplicação RDB')) expect(p.kind).toBe('investment_in');
-    for (const p of by((r) => r.srcDescription === 'Resgate RDB')) expect(p.kind).toBe('investment_out');
-    expect(by((r) => r.srcDescription.startsWith('SALARIO')).every((r) => r.kind === 'income')).toBe(true);
+    for (const p of by((r) => r.srcDescription === 'Pagamento recebido'))
+      expect(p.kind).toBe('card_payment');
+    for (const p of by((r) => r.srcDescription === 'Aplicação RDB'))
+      expect(p.kind).toBe('investment_in');
+    for (const p of by((r) => r.srcDescription === 'Resgate RDB'))
+      expect(p.kind).toBe('investment_out');
+    expect(
+      by((r) => r.srcDescription.startsWith('SALARIO')).every((r) => r.kind === 'income'),
+    ).toBe(true);
 
     const refund = by((r) => r.srcDescription.startsWith('Estorno'))[0]!;
     expect(refund.kind).toBe('refund');
-    expect(rows.find((r) => r.id === refund.refundOfTransactionId)?.srcDescription).toBe('AMAZON MARKETPLACE');
+    expect(rows.find((r) => r.id === refund.refundOfTransactionId)?.srcDescription).toBe(
+      'AMAZON MARKETPLACE',
+    );
   });
 
   it('nunca conta pagamento de fatura como despesa', async () => {
@@ -130,7 +156,9 @@ describe('carga histórica', () => {
 describe('mudanças na origem', () => {
   it('exclusão some do app e volta se a transação reaparecer', async () => {
     await sync('fake-item-itau');
-    const victim = [...fake.txs.values()].find((t) => t.description === 'DEB AUT VIVO FIBRA' && t.date >= new Date(Date.now() - 20 * 864e5))!;
+    const victim = [...fake.txs.values()].find(
+      (t) => t.description === 'DEB AUT VIVO FIBRA' && t.date >= new Date(Date.now() - 20 * 864e5),
+    )!;
     const saved = { ...victim };
     fake.deleteTx(victim.id);
     await sync('fake-item-itau', 'incremental');
@@ -145,21 +173,38 @@ describe('mudanças na origem', () => {
 
   it('troca de id pela Pluggy preserva edições manuais', async () => {
     await sync('fake-item-itau');
-    const recent = [...fake.txs.values()].find((t) => t.description.startsWith('PADARIA') && t.date >= new Date(Date.now() - 30 * 864e5))!;
+    const recent = [...fake.txs.values()].find(
+      (t) => t.description.startsWith('PADARIA') && t.date >= new Date(Date.now() - 30 * 864e5),
+    )!;
     const [row] = await db.select().from(tx).where(eq(tx.pluggyId, recent.id));
-    await db.update(tx).set({ notes: 'café com o time', userKind: 'adjustment' }).where(eq(tx.id, row!.id));
+    await db
+      .update(tx)
+      .set({ notes: 'café com o time', userKind: 'adjustment' })
+      .where(eq(tx.id, row!.id));
 
     const newId = fake.changeTxId(recent.id);
     await sync('fake-item-itau', 'incremental');
 
     const [heir] = await db.select().from(tx).where(eq(tx.pluggyId, newId));
-    expect(heir).toMatchObject({ notes: 'café com o time', userKind: 'adjustment', kind: 'adjustment', kindSource: 'user' });
+    expect(heir).toMatchObject({
+      notes: 'café com o time',
+      userKind: 'adjustment',
+      kind: 'adjustment',
+      kindSource: 'user',
+    });
     const [old] = await db.select().from(tx).where(eq(tx.id, row!.id));
     expect(old!.deletedAt).not.toBeNull();
   });
 
   it('troca de id com providerId reaproveita a mesma linha', async () => {
-    const t = fake.addTx({ accountId: 'fake-item-itau-checking', date: new Date(), description: 'MERCADINHO', type: 'DEBIT', amount: -12.5, providerId: 'prov-1' });
+    const t = fake.addTx({
+      accountId: 'fake-item-itau-checking',
+      date: new Date(),
+      description: 'MERCADINHO',
+      type: 'DEBIT',
+      amount: -12.5,
+      providerId: 'prov-1',
+    });
     await sync('fake-item-itau');
     const [row] = await db.select().from(tx).where(eq(tx.pluggyId, t.id));
     await db.update(tx).set({ notes: 'nota' }).where(eq(tx.id, row!.id));
@@ -171,7 +216,11 @@ describe('mudanças na origem', () => {
 
   it('decisão do usuário sobrevive ao pós-processamento', async () => {
     await sync('fake-item-itau');
-    const [salary] = await db.select().from(tx).where(sql`${tx.srcDescription} like 'SALARIO%'`).limit(1);
+    const [salary] = await db
+      .select()
+      .from(tx)
+      .where(sql`${tx.srcDescription} like 'SALARIO%'`)
+      .limit(1);
     await db.update(tx).set({ userKind: 'adjustment' }).where(eq(tx.id, salary!.id));
     await postprocess();
     const [after] = await db.select().from(tx).where(eq(tx.id, salary!.id));

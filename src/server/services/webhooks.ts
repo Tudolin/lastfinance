@@ -8,7 +8,13 @@ import type { JobStep } from '@/server/jobs/step';
 import { log } from '@/server/log';
 import { mapTransaction } from './pluggy-mapping';
 import { postprocess } from './postprocess';
-import { markConnectionDeleted, refreshConnection, softDeleteByPluggyIds, upsertTransactions, type SyncedAccount } from './sync';
+import {
+  markConnectionDeleted,
+  refreshConnection,
+  softDeleteByPluggyIds,
+  upsertTransactions,
+  type SyncedAccount,
+} from './sync';
 
 const { webhookEvent, account, institutionConnection } = schema;
 
@@ -46,7 +52,10 @@ export async function ingestWebhook(raw: unknown): Promise<IngestResult> {
     return { status: 'accepted', id: inserted.id };
   }
   // Duplicado: se a tentativa anterior gravou mas não conseguiu enfileirar, enfileira agora.
-  const [existing] = await db.select().from(webhookEvent).where(eq(webhookEvent.eventId, payload.eventId));
+  const [existing] = await db
+    .select()
+    .from(webhookEvent)
+    .where(eq(webhookEvent.eventId, payload.eventId));
   if (existing && existing.status === 'received') await enqueue(existing.id);
   return { status: 'duplicate', id: existing!.id };
 }
@@ -66,14 +75,28 @@ export async function requeueStuckWebhooks(olderThanMinutes = 10) {
   const stuck = await db
     .select({ id: webhookEvent.id })
     .from(webhookEvent)
-    .where(and(or(eq(webhookEvent.status, 'received'), eq(webhookEvent.status, 'enqueued')), lt(webhookEvent.receivedAt, cutoff)))
+    .where(
+      and(
+        or(eq(webhookEvent.status, 'received'), eq(webhookEvent.status, 'enqueued')),
+        lt(webhookEvent.receivedAt, cutoff),
+      ),
+    )
     .limit(100);
-  for (const s of stuck) await dispatch({ name: 'pluggy/webhook.received', data: { webhookEventId: s.id } });
+  for (const s of stuck)
+    await dispatch({ name: 'pluggy/webhook.received', data: { webhookEventId: s.id } });
   return stuck.length;
 }
 
-const txCreated = z.object({ itemId: z.string(), accountId: z.string(), transactionsCreatedAtFrom: z.string() });
-const txChanged = z.object({ itemId: z.string(), accountId: z.string(), transactionIds: z.array(z.string()) });
+const txCreated = z.object({
+  itemId: z.string(),
+  accountId: z.string(),
+  transactionsCreatedAtFrom: z.string(),
+});
+const txChanged = z.object({
+  itemId: z.string(),
+  accountId: z.string(),
+  transactionIds: z.array(z.string()),
+});
 
 async function localAccount(pluggyAccountId: string): Promise<SyncedAccount | null> {
   const [a] = await getDb()
@@ -106,7 +129,10 @@ export async function processWebhookEvent(step: JobStep, webhookEventId: string)
       case 'item/updated':
       case 'item/login_succeeded': {
         await step.run('dispatch-sync', () =>
-          dispatch({ name: 'pluggy/item.sync', data: { pluggyItemId: String(p.itemId), mode: 'incremental', trigger: 'webhook' } }),
+          dispatch({
+            name: 'pluggy/item.sync',
+            data: { pluggyItemId: String(p.itemId), mode: 'incremental', trigger: 'webhook' },
+          }),
         );
         break;
       }
@@ -128,14 +154,20 @@ export async function processWebhookEvent(step: JobStep, webhookEventId: string)
         if (!(await connectionExists(d.itemId))) {
           // Item ainda desconhecido: um sync completo cobre estas transações.
           await step.run('dispatch-sync', () =>
-            dispatch({ name: 'pluggy/item.sync', data: { pluggyItemId: d.itemId, mode: 'backfill', trigger: 'webhook' } }),
+            dispatch({
+              name: 'pluggy/item.sync',
+              data: { pluggyItemId: d.itemId, mode: 'backfill', trigger: 'webhook' },
+            }),
           );
           break;
         }
         const acc = await localAccount(d.accountId);
         if (!acc) {
           await step.run('dispatch-sync', () =>
-            dispatch({ name: 'pluggy/item.sync', data: { pluggyItemId: d.itemId, mode: 'incremental', trigger: 'webhook' } }),
+            dispatch({
+              name: 'pluggy/item.sync',
+              data: { pluggyItemId: d.itemId, mode: 'incremental', trigger: 'webhook' },
+            }),
           );
           break;
         }
@@ -143,11 +175,17 @@ export async function processWebhookEvent(step: JobStep, webhookEventId: string)
         let page = 0;
         do {
           const r: { next: string | null } = await step.run(`fetch-created:${page}`, async () => {
-            const res = await (await getPluggy()).fetchTransactionsPage(acc.pluggyAccountId, {
+            const res = await (
+              await getPluggy()
+            ).fetchTransactionsPage(acc.pluggyAccountId, {
               createdAtFrom: d.transactionsCreatedAtFrom,
               after,
             });
-            await upsertTransactions(acc, res.results.map((t) => mapTransaction(t, acc)), runId);
+            await upsertTransactions(
+              acc,
+              res.results.map((t) => mapTransaction(t, acc)),
+              runId,
+            );
             return { next: res.next };
           });
           after = r.next;
@@ -163,8 +201,14 @@ export async function processWebhookEvent(step: JobStep, webhookEventId: string)
         for (let i = 0; i < d.transactionIds.length; i += 500) {
           const ids = d.transactionIds.slice(i, i + 500);
           await step.run(`fetch-updated:${i}`, async () => {
-            const res = await (await getPluggy()).fetchTransactionsPage(acc.pluggyAccountId, { ids });
-            await upsertTransactions(acc, res.results.map((t) => mapTransaction(t, acc)), runId);
+            const res = await (
+              await getPluggy()
+            ).fetchTransactionsPage(acc.pluggyAccountId, { ids });
+            await upsertTransactions(
+              acc,
+              res.results.map((t) => mapTransaction(t, acc)),
+              runId,
+            );
           });
         }
         await step.run('postprocess', () => postprocess());
@@ -188,7 +232,11 @@ export async function processWebhookEvent(step: JobStep, webhookEventId: string)
   } catch (err) {
     await db
       .update(webhookEvent)
-      .set({ status: 'failed', attempts: ev.attempts + 1, error: (err as Error).message?.slice(0, 300) ?? 'erro' })
+      .set({
+        status: 'failed',
+        attempts: ev.attempts + 1,
+        error: (err as Error).message?.slice(0, 300) ?? 'erro',
+      })
       .where(eq(webhookEvent.id, ev.id));
     log.error('webhook falhou', err, { eventId: ev.eventId, event: ev.event });
     throw err;
@@ -210,4 +258,3 @@ export async function recentWebhookEvents(limit = 30) {
     .orderBy(desc(webhookEvent.receivedAt))
     .limit(limit);
 }
-

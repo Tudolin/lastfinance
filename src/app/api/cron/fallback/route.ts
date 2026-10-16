@@ -15,14 +15,18 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const secret = env().CRON_SECRET;
   const given = (req.headers.get('authorization') ?? '').replace(/^Bearer /, '');
-  if (!secret || !safeEqual(given, secret)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  if (!secret || !safeEqual(given, secret))
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
   const items = await getDb()
     .select({ pluggyItemId: schema.institutionConnection.pluggyItemId })
     .from(schema.institutionConnection)
     .where(isNull(schema.institutionConnection.deletedAt));
   for (const i of items) {
-    await dispatch({ name: 'pluggy/item.sync', data: { pluggyItemId: i.pluggyItemId, mode: 'incremental', trigger: 'cron' } });
+    await dispatch({
+      name: 'pluggy/item.sync',
+      data: { pluggyItemId: i.pluggyItemId, mode: 'incremental', trigger: 'cron' },
+    });
   }
   return NextResponse.json({ ok: true, items: items.length });
 }

@@ -1,7 +1,12 @@
 import 'server-only';
 import { and, eq, gte, inArray, isNotNull, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
 import { inferCycleConfig } from '@/domain/cards/billing-cycle';
-import { mapAccount, mapTransaction, pluggyDateToLocal, type MappedTransaction } from './pluggy-mapping';
+import {
+  mapAccount,
+  mapTransaction,
+  pluggyDateToLocal,
+  type MappedTransaction,
+} from './pluggy-mapping';
 import { toCents } from '@/domain/money';
 import { todaySP, type LocalDate } from '@/domain/dates/local-date';
 import { getPluggy } from '@/server/adapters/pluggy/client';
@@ -9,7 +14,16 @@ import type { PluggyItem, TransactionQuery } from '@/server/adapters/pluggy/type
 import { getDb, schema } from '@/server/db/client';
 import { hashDocument } from '@/server/security/crypto';
 
-const { institutionConnection, account, transaction, creditCardBill, investment, investmentTransaction, ownDocument, syncLog } = schema;
+const {
+  institutionConnection,
+  account,
+  transaction,
+  creditCardBill,
+  investment,
+  investmentTransaction,
+  ownDocument,
+  syncLog,
+} = schema;
 
 export type SyncTrigger = (typeof schema.syncTrigger.enumValues)[number];
 
@@ -55,18 +69,28 @@ export async function markConnectionDeleted(pluggyItemId: string) {
 
 // ───────────────────────── Contas ─────────────────────────
 
-export type SyncedAccount = { id: string; pluggyAccountId: string; kind: 'checking' | 'savings' | 'credit_card' };
+export type SyncedAccount = {
+  id: string;
+  pluggyAccountId: string;
+  kind: 'checking' | 'savings' | 'credit_card';
+};
 
 export async function syncAccounts(connectionId: string): Promise<SyncedAccount[]> {
   const db = getDb();
-  const [conn] = await db.select().from(institutionConnection).where(eq(institutionConnection.id, connectionId));
+  const [conn] = await db
+    .select()
+    .from(institutionConnection)
+    .where(eq(institutionConnection.id, connectionId));
   if (!conn) throw new Error('Conexão não encontrada');
   const remote = await (await getPluggy()).fetchAccounts(conn.pluggyItemId);
   const out: SyncedAccount[] = [];
 
   for (const a of remote) {
     const v = mapAccount(a);
-    const [existing] = await db.select({ id: account.id }).from(account).where(eq(account.pluggyAccountId, a.id));
+    const [existing] = await db
+      .select({ id: account.id })
+      .from(account)
+      .where(eq(account.pluggyAccountId, a.id));
     let id = existing?.id;
     if (!id) {
       // Item reconectado como novo: reaproveita a conta antiga da mesma instituição (mesmo tipo e final),
@@ -92,7 +116,10 @@ export async function syncAccounts(connectionId: string): Promise<SyncedAccount[
     };
     const { closingDay: _c, dueDay: _d, ...base } = v;
     if (id) {
-      await db.update(account).set({ ...base, ...keepCycle, connectionId }).where(eq(account.id, id));
+      await db
+        .update(account)
+        .set({ ...base, ...keepCycle, connectionId })
+        .where(eq(account.id, id));
     } else {
       const [row] = await db
         .insert(account)
@@ -110,7 +137,12 @@ export async function syncAccounts(connectionId: string): Promise<SyncedAccount[
   await db
     .update(account)
     .set({ isActive: false })
-    .where(and(eq(account.connectionId, connectionId), seen.length ? notInArray(account.id, seen) : sql`true`));
+    .where(
+      and(
+        eq(account.connectionId, connectionId),
+        seen.length ? notInArray(account.id, seen) : sql`true`,
+      ),
+    );
   return out;
 }
 
@@ -149,11 +181,18 @@ export type UpsertCounts = { inserted: number; updated: number; reattached: numb
  * Upsert idempotente por `pluggy_id`. Quando a Pluggy troca o id de uma transação, reaproveita a linha
  * antiga (e as edições manuais) casando por `provider_id` ou pela impressão digital de uma linha já apagada.
  */
-export async function upsertTransactions(acc: SyncedAccount, rows: MappedTransaction[], runId: string): Promise<UpsertCounts> {
+export async function upsertTransactions(
+  acc: SyncedAccount,
+  rows: MappedTransaction[],
+  runId: string,
+): Promise<UpsertCounts> {
   if (rows.length === 0) return { inserted: 0, updated: 0, reattached: 0 };
   return getDb().transaction(async (db) => {
     const ids = rows.map((r) => r.pluggyId);
-    const existing = await db.select({ pluggyId: transaction.pluggyId }).from(transaction).where(inArray(transaction.pluggyId, ids));
+    const existing = await db
+      .select({ pluggyId: transaction.pluggyId })
+      .from(transaction)
+      .where(inArray(transaction.pluggyId, ids));
     const known = new Set(existing.map((e) => e.pluggyId));
     let reattached = 0;
     const claimed = new Set<string>();
@@ -175,7 +214,10 @@ export async function upsertTransactions(acc: SyncedAccount, rows: MappedTransac
         .limit(1);
       if (match) {
         claimed.add(match.id);
-        await db.update(transaction).set({ pluggyId: r.pluggyId }).where(eq(transaction.id, match.id));
+        await db
+          .update(transaction)
+          .set({ pluggyId: r.pluggyId })
+          .where(eq(transaction.id, match.id));
         reattached++;
         known.add(r.pluggyId);
       }
@@ -230,7 +272,13 @@ async function softDelete(where: ReturnType<typeof and>) {
     if (heir) {
       await db
         .update(transaction)
-        .set({ userDescription: d.userDescription, userKind: d.userKind, notes: d.notes, tags: d.tags, categoryId: d.categoryId })
+        .set({
+          userDescription: d.userDescription,
+          userKind: d.userKind,
+          notes: d.notes,
+          tags: d.tags,
+          categoryId: d.categoryId,
+        })
         .where(eq(transaction.id, heir.id));
     }
   }
@@ -284,22 +332,41 @@ export async function syncBills(acc: SyncedAccount, today: LocalDate = todaySP()
       minimumPaymentCents: b.minimumPaymentAmount != null ? toCents(b.minimumPaymentAmount) : null,
       allowsInstallments: b.allowsInstallments,
       financeCharges: b.financeCharges,
-      payments: b.payments.map((p) => ({ date: pluggyDateToLocal(p.paymentDate), amountCents: toCents(p.amount), valueType: p.valueType })),
+      payments: b.payments.map((p) => ({
+        date: pluggyDateToLocal(p.paymentDate),
+        amountCents: toCents(p.amount),
+        valueType: p.valueType,
+      })),
       status: status as (typeof schema.billStatus.enumValues)[number],
       paidCents,
     };
-    await db.insert(creditCardBill).values(values).onConflictDoUpdate({ target: creditCardBill.pluggyBillId, set: values });
+    await db
+      .insert(creditCardBill)
+      .values(values)
+      .onConflictDoUpdate({ target: creditCardBill.pluggyBillId, set: values });
   }
 
   // Sem fechamento/vencimento informados na conta, deduz pelas faturas.
   const [acct] = await db.select().from(account).where(eq(account.id, acc.id));
   if (acct && (acct.closingDay == null || acct.dueDay == null)) {
-    const rows = await db.select({ closingDate: creditCardBill.closingDate, dueDate: creditCardBill.dueDate }).from(creditCardBill).where(eq(creditCardBill.accountId, acc.id));
-    const cfg = inferCycleConfig(rows.map((r) => ({ closingDate: r.closingDate as LocalDate | null, dueDate: r.dueDate as LocalDate })));
+    const rows = await db
+      .select({ closingDate: creditCardBill.closingDate, dueDate: creditCardBill.dueDate })
+      .from(creditCardBill)
+      .where(eq(creditCardBill.accountId, acc.id));
+    const cfg = inferCycleConfig(
+      rows.map((r) => ({
+        closingDate: r.closingDate as LocalDate | null,
+        dueDate: r.dueDate as LocalDate,
+      })),
+    );
     if (cfg) {
       await db
         .update(account)
-        .set({ closingDay: acct.closingDay ?? cfg.closingDay, dueDay: acct.dueDay ?? cfg.dueDay, closingDaySource: acct.closingDaySource ?? 'inferred' })
+        .set({
+          closingDay: acct.closingDay ?? cfg.closingDay,
+          dueDay: acct.dueDay ?? cfg.dueDay,
+          closingDaySource: acct.closingDaySource ?? 'inferred',
+        })
         .where(eq(account.id, acc.id));
     }
   }
@@ -310,7 +377,10 @@ export async function syncBills(acc: SyncedAccount, today: LocalDate = todaySP()
 
 export async function syncInvestments(connectionId: string) {
   const db = getDb();
-  const [conn] = await db.select().from(institutionConnection).where(eq(institutionConnection.id, connectionId));
+  const [conn] = await db
+    .select()
+    .from(institutionConnection)
+    .where(eq(institutionConnection.id, connectionId));
   if (!conn) return 0;
   const pluggy = await getPluggy();
   const list = await pluggy.fetchInvestments(conn.pluggyItemId);
@@ -355,26 +425,45 @@ export async function syncInvestments(connectionId: string) {
         amountCents: toCents(amount),
         netAmountCents: t.netAmount != null ? toCents(t.netAmount) : null,
       };
-      await db.insert(investmentTransaction).values(v).onConflictDoUpdate({ target: investmentTransaction.pluggyId, set: v });
+      await db
+        .insert(investmentTransaction)
+        .values(v)
+        .onConflictDoUpdate({ target: investmentTransaction.pluggyId, set: v });
     }
   }
   await db
     .update(investment)
     .set({ deletedAt: new Date() })
-    .where(and(eq(investment.connectionId, connectionId), isNull(investment.deletedAt), seen.length ? notInArray(investment.pluggyInvestmentId, seen) : sql`true`));
+    .where(
+      and(
+        eq(investment.connectionId, connectionId),
+        isNull(investment.deletedAt),
+        seen.length ? notInArray(investment.pluggyInvestmentId, seen) : sql`true`,
+      ),
+    );
   return list.length;
 }
 
 // ───────────────────────── Log de sincronização ─────────────────────────
 
-export async function startSyncLog(p: { connectionId: string | null; trigger: SyncTrigger; job: string; runId: string }) {
+export async function startSyncLog(p: {
+  connectionId: string | null;
+  trigger: SyncTrigger;
+  job: string;
+  runId: string;
+}) {
   const [row] = await getDb().insert(syncLog).values(p).returning({ id: syncLog.id });
   return row!.id;
 }
 
 export async function finishSyncLog(
   id: string,
-  p: { status: 'success' | 'partial' | 'error'; counts?: Record<string, number>; errorCode?: string | null; errorMessage?: string | null },
+  p: {
+    status: 'success' | 'partial' | 'error';
+    counts?: Record<string, number>;
+    errorCode?: string | null;
+    errorMessage?: string | null;
+  },
 ) {
   await getDb()
     .update(syncLog)

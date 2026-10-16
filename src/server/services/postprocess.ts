@@ -45,24 +45,25 @@ export async function postprocess(today: LocalDate = todaySP()) {
   ]);
 
   const accountById = new Map(accounts.map((a) => [a.id, a]));
-  const billByPluggyId = new Map(bills.filter((b) => b.pluggyBillId).map((b) => [b.pluggyBillId!, b]));
+  const billByPluggyId = new Map(
+    bills.filter((b) => b.pluggyBillId).map((b) => [b.pluggyBillId!, b]),
+  );
   const billsByAccount = new Map<string, typeof bills>();
-  for (const b of bills) billsByAccount.set(b.accountId, [...(billsByAccount.get(b.accountId) ?? []), b]);
+  for (const b of bills)
+    billsByAccount.set(b.accountId, [...(billsByAccount.get(b.accountId) ?? []), b]);
 
   const classified = classifyTransactions({
     accounts: accounts.map((a) => ({ id: a.id, kind: a.kind })),
-    transactions: txs.map(
-      (t): ClassifiableTx => ({
-        id: t.id,
-        accountId: t.accountId,
-        date: t.date as LocalDate,
-        amountCents: t.amountCents,
-        description: t.srcDescription,
-        counterpartyDocHash: t.counterpartyDocHash,
-        userKind: t.userKind,
-        ruleKind: null,
-      }),
-    ),
+    transactions: txs.map((t): ClassifiableTx => ({
+      id: t.id,
+      accountId: t.accountId,
+      date: t.date as LocalDate,
+      amountCents: t.amountCents,
+      description: t.srcDescription,
+      counterpartyDocHash: t.counterpartyDocHash,
+      userKind: t.userKind,
+      ruleKind: null,
+    })),
     bills: bills.map((b) => ({
       id: b.id,
       accountId: b.accountId,
@@ -88,13 +89,20 @@ export async function postprocess(today: LocalDate = todaySP()) {
         (t.pluggyBillId ? billByPluggyId.get(t.pluggyBillId) : undefined) ??
         assignToKnownBill(
           t.competenceDate as LocalDate,
-          (billsByAccount.get(acc.id) ?? []).map((b) => ({ ...b, closingDate: b.closingDate as LocalDate | null, dueDate: b.dueDate as LocalDate })),
+          (billsByAccount.get(acc.id) ?? []).map((b) => ({
+            ...b,
+            closingDate: b.closingDate as LocalDate | null,
+            dueDate: b.dueDate as LocalDate,
+          })),
         );
       if (bill) {
         billId = bill.id;
         cashDate = cashDateForDue(bill.dueDate as LocalDate, bankingCalendar);
       } else if (acc.closingDay && acc.dueDay) {
-        const cycle = cycleForPurchase(t.competenceDate as LocalDate, { closingDay: acc.closingDay, dueDay: acc.dueDay });
+        const cycle = cycleForPurchase(t.competenceDate as LocalDate, {
+          closingDay: acc.closingDay,
+          dueDay: acc.dueDay,
+        });
         cashDate = cashDateForDue(cycle.dueDate, bankingCalendar);
       }
     }

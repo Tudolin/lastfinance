@@ -1,0 +1,119 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tokens do design aprovado (claro). */
+:root {
+  --bg: #f4f5f1;
+  --surface: #ffffff;
+  --surface-2: #eef0ea;
+  --muted-track: #e7eae3;
+  --border: #dde1d8;
+  --border-strong: #c9cfc4;
+  --ink: #15201b;
+  --ink-2: #4a5650;
+  --ink-3: #66716b;
+  --primary: #0b6e55;
+  --primary-ink: #ffffff;
+  --primary-soft: #e3f1eb;
+  --primary-on-soft: #0b6e55;
+  --hero-sub: #cdeadf;
+  --warn: #d08a12;
+  --warn-soft: #fbefd9;
+  --warn-ink: #6b4000;
+  --warn-border: #ebcb8f;
+  --danger: #b3261e;
+  --danger-soft: #f9e3e0;
+  --danger-ink: #7a1a13;
+  --info-soft: #e1ecf7;
+  --info-ink: #1f4e79;
+  --link: #0b6e55;
+}
+
+.dark {
+  --bg: #0e1512;
+  --surface: #16201b;
+  --surface-2: #1d2924;
+  --muted-track: #2a3730;
+  --border: #2a3730;
+  --border-strong: #3a4a42;
+  --ink: #e8eeea;
+  --ink-2: #a9b5ae;
+  --ink-3: #8f9b94;
+  --primary: #123b30;
+  --primary-ink: #e8eeea;
+  --primary-soft: #173a2f;
+  --primary-on-soft: #7fd8b5;
+  --hero-sub: #a9b5ae;
+  --warn: #f0b44c;
+  --warn-soft: #3a2a10;
+  --warn-ink: #f6d9a3;
+  --warn-border: #6b4f1a;
+  --danger: #ff8a7a;
+  --danger-soft: #3b1d19;
+  --danger-ink: #ffc3b8;
+  --info-soft: #172a3d;
+  --info-ink: #a9cdf0;
+  --link: #7fd8b5;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-track: var(--muted-track);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-on-soft: var(--primary-on-soft);
+  --color-hero-sub: var(--hero-sub);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-border: var(--warn-border);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-ink: var(--danger-ink);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
+  --color-link: var(--link);
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+}
+
+@layer base {
+  html,
+  body {
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  body {
+    font-variant-numeric: tabular-nums;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a {
+    color: var(--link);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+}
+
+/* Modo "ocultar valores": o componente <Money> lê o atributo e mostra pontos. */
+[data-hide-values='true'] .money-value {
+  display: none;
+}
+[data-hide-values='true'] .money-hidden {
+  display: inline;
+}
+.money-hidden {
+  display: none;
+}

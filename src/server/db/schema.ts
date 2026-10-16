@@ -25,7 +25,10 @@ import {
 import { uuidv7 } from 'uuidv7';
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({ dataType: () => 'bytea' });
-const id = () => uuid('id').primaryKey().$defaultFn(() => uuidv7());
+const id = () =>
+  uuid('id')
+    .primaryKey()
+    .$defaultFn(() => uuidv7());
 const cents = (name: string) => bigint(name, { mode: 'number' });
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' });
 const day = (name: string) => date(name, { mode: 'string' });
@@ -52,11 +55,16 @@ export const appUser = pgTable('app_user', {
 
 export const webauthnCredential = pgTable('webauthn_credential', {
   id: id(),
-  userId: uuid('user_id').notNull().references(() => appUser.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => appUser.id, { onDelete: 'cascade' }),
   credentialId: text('credential_id').notNull().unique(),
   publicKey: bytea('public_key').notNull(),
   counter: bigint('counter', { mode: 'number' }).notNull().default(0),
-  transports: text('transports').array().notNull().default(sql`'{}'::text[]`),
+  transports: text('transports')
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   deviceName: text('device_name').notNull(),
   backedUp: boolean('backed_up').notNull().default(false),
   lastUsedAt: ts('last_used_at'),
@@ -67,7 +75,9 @@ export const session = pgTable(
   'session',
   {
     id: id(),
-    userId: uuid('user_id').notNull().references(() => appUser.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => appUser.id, { onDelete: 'cascade' }),
     tokenHash: text('token_hash').notNull().unique(),
     userAgent: text('user_agent'),
     ipPrefix: text('ip_prefix'),
@@ -85,7 +95,9 @@ export const session = pgTable(
 
 export const recoveryCode = pgTable('recovery_code', {
   id: id(),
-  userId: uuid('user_id').notNull().references(() => appUser.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => appUser.id, { onDelete: 'cascade' }),
   codeHash: text('code_hash').notNull().unique(),
   usedAt: ts('used_at'),
   createdAt: ts('created_at').notNull().defaultNow(),
@@ -103,7 +115,12 @@ export const authAttempt = pgTable(
   (t) => [index('auth_attempt_identifier_at_idx').on(t.identifier, t.at)],
 );
 
-export const challengePurpose = pgEnum('challenge_purpose', ['webauthn_register', 'webauthn_login', 'webauthn_stepup', 'totp_login']);
+export const challengePurpose = pgEnum('challenge_purpose', [
+  'webauthn_register',
+  'webauthn_login',
+  'webauthn_stepup',
+  'totp_login',
+]);
 
 export const authChallenge = pgTable('auth_challenge', {
   id: id(),
@@ -193,7 +210,14 @@ export const category = pgTable('category', {
   ...timestamps,
 });
 
-export const billStatus = pgEnum('bill_status', ['open', 'closed', 'paid', 'partial', 'overdue', 'projected']);
+export const billStatus = pgEnum('bill_status', [
+  'open',
+  'closed',
+  'paid',
+  'partial',
+  'overdue',
+  'projected',
+]);
 
 export const creditCardBill = pgTable(
   'credit_card_bill',
@@ -209,7 +233,10 @@ export const creditCardBill = pgTable(
     minimumPaymentCents: cents('minimum_payment_cents'),
     allowsInstallments: boolean('allows_installments'),
     financeCharges: jsonb('finance_charges').$type<unknown[]>().notNull().default([]),
-    payments: jsonb('payments').$type<{ date: string; amountCents: number; valueType: string }[]>().notNull().default([]),
+    payments: jsonb('payments')
+      .$type<{ date: string; amountCents: number; valueType: string }[]>()
+      .notNull()
+      .default([]),
     status: billStatus('status').notNull().default('open'),
     paidCents: cents('paid_cents').notNull().default(0),
     ...timestamps,
@@ -274,7 +301,10 @@ export const transaction = pgTable(
 
     categoryId: uuid('category_id').references(() => category.id, { onDelete: 'set null' }),
     notes: text('notes'),
-    tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
+    tags: text('tags')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     counterpartyDocHash: text('counterparty_doc_hash'),
     /** Payload da Pluggy sem documentos/contas da contraparte (ver sanitize). */
     srcPayload: jsonb('src_payload').$type<unknown>(),
@@ -288,7 +318,9 @@ export const transaction = pgTable(
     index('tx_cash_date_idx').on(t.cashDate),
     index('tx_competence_date_idx').on(t.competenceDate),
     index('tx_fingerprint_idx').on(t.fingerprint),
-    uniqueIndex('tx_provider_id_uq').on(t.accountId, t.providerId).where(sql`${t.providerId} is not null`),
+    uniqueIndex('tx_provider_id_uq')
+      .on(t.accountId, t.providerId)
+      .where(sql`${t.providerId} is not null`),
   ],
 );
 
@@ -334,7 +366,13 @@ export const investmentTransaction = pgTable('investment_transaction', {
 
 // ───────────────────────── Operação ─────────────────────────
 
-export const webhookStatus = pgEnum('webhook_status', ['received', 'enqueued', 'processed', 'failed', 'ignored']);
+export const webhookStatus = pgEnum('webhook_status', [
+  'received',
+  'enqueued',
+  'processed',
+  'failed',
+  'ignored',
+]);
 
 export const webhookEvent = pgTable(
   'webhook_event',
@@ -354,14 +392,22 @@ export const webhookEvent = pgTable(
   (t) => [index('webhook_status_idx').on(t.status, t.receivedAt)],
 );
 
-export const syncTrigger = pgEnum('sync_trigger', ['webhook', 'cron', 'manual', 'backfill', 'connect']);
+export const syncTrigger = pgEnum('sync_trigger', [
+  'webhook',
+  'cron',
+  'manual',
+  'backfill',
+  'connect',
+]);
 export const syncStatus = pgEnum('sync_status', ['running', 'success', 'partial', 'error']);
 
 export const syncLog = pgTable(
   'sync_log',
   {
     id: id(),
-    connectionId: uuid('connection_id').references(() => institutionConnection.id, { onDelete: 'cascade' }),
+    connectionId: uuid('connection_id').references(() => institutionConnection.id, {
+      onDelete: 'cascade',
+    }),
     trigger: syncTrigger('trigger').notNull(),
     job: text('job').notNull(),
     status: syncStatus('status').notNull().default('running'),

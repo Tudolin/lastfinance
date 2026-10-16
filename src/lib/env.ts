@@ -17,7 +17,10 @@ const schema = z.object({
   SESSION_SECRET: z.string().min(32, 'SESSION_SECRET precisa de pelo menos 32 caracteres'),
   DATA_ENCRYPTION_KEY: z
     .string()
-    .refine((v) => Buffer.from(v, 'base64').length === 32, 'DATA_ENCRYPTION_KEY: 32 bytes em base64'),
+    .refine(
+      (v) => Buffer.from(v, 'base64').length === 32,
+      'DATA_ENCRYPTION_KEY: 32 bytes em base64',
+    ),
   SETUP_TOKEN: z.string().min(16).optional(),
 
   PLUGGY_CLIENT_ID: z.string().optional(),
@@ -39,7 +42,9 @@ export function env(): Env {
   if (cached) return cached;
   const parsed = schema.safeParse(process.env);
   if (!parsed.success) {
-    const issues = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
+    const issues = parsed.error.issues
+      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
+      .join('\n');
     throw new Error(`Variáveis de ambiente inválidas:\n${issues}`);
   }
   const e = parsed.data;

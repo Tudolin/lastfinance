@@ -4,7 +4,14 @@
  * salário, aluguel, Pix entre contas próprias, pagamento de fatura, caixinha, parcelado e estorno.
  * Convenções de sinal iguais às da Pluggy real: conta → DEBIT negativo; cartão → compra positiva.
  */
-import { addDays, addMonths, clampedDate, parts, ymd, type LocalDate } from '@/domain/dates/local-date';
+import {
+  addDays,
+  addMonths,
+  clampedDate,
+  parts,
+  ymd,
+  type LocalDate,
+} from '@/domain/dates/local-date';
 import { bankingCalendar } from '@/domain/dates/business-days';
 import type {
   PluggyAccount,
@@ -104,7 +111,22 @@ export class FakePluggy implements PluggyGateway {
     return `${prefix}-${String(this.seq).padStart(5, '0')}`;
   }
 
-  addTx(t: Omit<PluggyTransaction, 'id' | 'currencyCode' | 'status' | 'descriptionRaw' | 'providerCode' | 'providerId' | 'operationType' | 'paymentData' | 'creditCardMetadata'> & Partial<PluggyTransaction>, createdAt = new Date()): StoredTx {
+  addTx(
+    t: Omit<
+      PluggyTransaction,
+      | 'id'
+      | 'currencyCode'
+      | 'status'
+      | 'descriptionRaw'
+      | 'providerCode'
+      | 'providerId'
+      | 'operationType'
+      | 'paymentData'
+      | 'creditCardMetadata'
+    > &
+      Partial<PluggyTransaction>,
+    createdAt = new Date(),
+  ): StoredTx {
     const tx: StoredTx = {
       id: t.id ?? this.nextId('tx'),
       currencyCode: 'BRL',
@@ -135,7 +157,11 @@ export class FakePluggy implements PluggyGateway {
     return nid;
   }
 
-  setItemStatus(itemId: string, status: string, error: { code: string; message: string } | null = null) {
+  setItemStatus(
+    itemId: string,
+    status: string,
+    error: { code: string; message: string } | null = null,
+  ) {
     const it = this.items.get(itemId)!;
     this.items.set(itemId, { ...it, status, error, executionStatus: error ? 'ERROR' : 'SUCCESS' });
   }
@@ -191,7 +217,9 @@ export class FakePluggy implements PluggyGateway {
       taxNumber: FAKE_OWN_CPF,
       currencyCode: 'BRL',
       creditData: {
-        balanceCloseDate: at(clampedDate(parts(this.today).year, parts(this.today).month, closingDay)),
+        balanceCloseDate: at(
+          clampedDate(parts(this.today).year, parts(this.today).month, closingDay),
+        ),
         balanceDueDate: at(clampedDate(parts(this.today).year, parts(this.today).month, dueDay)),
         availableCreditLimit: isNu ? 5484.2 : 4087.52,
         creditLimit: isNu ? 8000 : 5000,
@@ -202,33 +230,65 @@ export class FakePluggy implements PluggyGateway {
     const start = addMonths(this.today, -months);
     const r = this.rand;
     let balance = isNu ? 1500 : 3000;
-    const cardPurchases: { date: LocalDate; amount: number; desc: string; inst?: [number, number] }[] = [];
+    const cardPurchases: {
+      date: LocalDate;
+      amount: number;
+      desc: string;
+      inst?: [number, number];
+    }[] = [];
 
     for (let m = 0; m <= months; m++) {
       const base = addMonths(start, m);
       const { year, month } = parts(base);
       const inMonth = (day: number) => clampedDate(year, month, day);
-      const add = (date: LocalDate, amount: number, description: string, extra: Partial<PluggyTransaction> = {}) => {
+      const add = (
+        date: LocalDate,
+        amount: number,
+        description: string,
+        extra: Partial<PluggyTransaction> = {},
+      ) => {
         if (date > this.today || date < start) return;
         balance += amount;
         this.addTx(
-          { accountId: checking, date: at(date), description, type: amount < 0 ? 'DEBIT' : 'CREDIT', amount, ...extra },
+          {
+            accountId: checking,
+            date: at(date),
+            description,
+            type: amount < 0 ? 'DEBIT' : 'CREDIT',
+            amount,
+            ...extra,
+          },
           at(date),
         );
       };
 
       if (!isNu) {
         add(bankingCalendar.nthBusinessDay(year, month, 5), 6127.3, 'SALARIO ACME LTDA');
-        add(inMonth(1), -2100, 'PIX ENVIADO IMOBILIARIA BOA VISTA', { paymentData: { receiver: { documentNumber: { value: '11222333000181', type: 'CNPJ' } }, payer: undefined } });
+        add(inMonth(1), -2100, 'PIX ENVIADO IMOBILIARIA BOA VISTA', {
+          paymentData: {
+            receiver: { documentNumber: { value: '11222333000181', type: 'CNPJ' } },
+            payer: undefined,
+          },
+        });
         add(inMonth(8), -129.9, 'DEB AUT VIVO FIBRA');
         // Pix para o Nubank (conta própria) — o par fica no Nubank
         const tdate = bankingCalendar.nthBusinessDay(year, month, 6);
-        add(tdate, -1500, 'PIX TRANSF ENVIADA NU PAGAMENTOS', { paymentData: { receiver: { documentNumber: { value: FAKE_OWN_CPF, type: 'CPF' } }, payer: undefined } });
+        add(tdate, -2500, 'PIX TRANSF ENVIADA NU PAGAMENTOS', {
+          paymentData: {
+            receiver: { documentNumber: { value: FAKE_OWN_CPF, type: 'CPF' } },
+            payer: undefined,
+          },
+        });
         add(inMonth(12), -45.5 - Math.round(r() * 3000) / 100, 'PADARIA SAO JORGE');
       } else {
         const tdate = bankingCalendar.nthBusinessDay(year, month, 6);
-        add(tdate, 1500, 'Transferência recebida pelo Pix', { paymentData: { payer: { documentNumber: { value: FAKE_OWN_CPF, type: 'CPF' } }, receiver: undefined } });
-        add(inMonth(14), -800, 'Aplicação RDB');
+        add(tdate, 2500, 'Transferência recebida pelo Pix', {
+          paymentData: {
+            payer: { documentNumber: { value: FAKE_OWN_CPF, type: 'CPF' } },
+            receiver: undefined,
+          },
+        });
+        add(inMonth(14), -500, 'Aplicação RDB');
         if (month % 3 === 0) add(inMonth(20), 300, 'Resgate RDB');
       }
 
@@ -247,8 +307,9 @@ export class FakePluggy implements PluggyGateway {
       for (const [desc, n, spread] of purchases) {
         for (let k = 0; k < n; k++) {
           const day = desc.startsWith('NETFLIX') ? 15 : 1 + Math.floor(r() * 27);
-          const amount =
-            desc.startsWith('NETFLIX') ? 55.9 : Math.round((20 + r() * (spread * 60 + 40)) * 100) / 100;
+          const amount = desc.startsWith('NETFLIX')
+            ? 55.9
+            : Math.round((20 + r() * (spread * 60 + 40)) * 100) / 100;
           cardPurchases.push({ date: inMonth(day), amount, desc });
         }
       }
@@ -258,13 +319,22 @@ export class FakePluggy implements PluggyGateway {
       // notebook em 10x no Itaú, comprado há 2 meses
       const buy = addMonths(this.today, -2);
       for (let k = 1; k <= 10; k++) {
-        cardPurchases.push({ date: addMonths(buy, k - 1), amount: 412.5, desc: `NOTEBOOK DELL ${String(k).padStart(2, '0')}/10`, inst: [k, 10] });
+        cardPurchases.push({
+          date: addMonths(buy, k - 1),
+          amount: 412.5,
+          desc: `NOTEBOOK DELL ${String(k).padStart(2, '0')}/10`,
+          inst: [k, 10],
+        });
       }
     } else {
       // compra + estorno
       const d1 = addDays(this.today, -14);
       cardPurchases.push({ date: d1, amount: 89.9, desc: 'AMAZON MARKETPLACE' });
-      cardPurchases.push({ date: addDays(d1, 11), amount: -89.9, desc: 'Estorno AMAZON MARKETPLACE' });
+      cardPurchases.push({
+        date: addDays(d1, 11),
+        amount: -89.9,
+        desc: 'Estorno AMAZON MARKETPLACE',
+      });
     }
 
     // fatura por ciclo
@@ -274,7 +344,10 @@ export class FakePluggy implements PluggyGateway {
       let close = clampedDate(year, month, closingDay);
       if (d >= close) close = addMonths(close, 1);
       close = clampedDate(parts(close).year, parts(close).month, closingDay);
-      const due = dueDay > closingDay ? clampedDate(parts(close).year, parts(close).month, dueDay) : clampedDate(parts(addMonths(close, 1)).year, parts(addMonths(close, 1)).month, dueDay);
+      const due =
+        dueDay > closingDay
+          ? clampedDate(parts(close).year, parts(close).month, dueDay)
+          : clampedDate(parts(addMonths(close, 1)).year, parts(addMonths(close, 1)).month, dueDay);
       return { close, due };
     };
     const byCycle = new Map<string, { close: LocalDate; due: LocalDate; total: number }>();
@@ -311,19 +384,42 @@ export class FakePluggy implements PluggyGateway {
         minimumPaymentAmount: Math.round(c.total * 15) / 100,
         allowsInstallments: true,
         financeCharges: [],
-        payments: paid ? [{ paymentDate: at(c.due), amount: c.total, valueType: 'FULL_PAYMENT' }] : [],
+        payments: paid
+          ? [{ paymentDate: at(c.due), amount: c.total, valueType: 'FULL_PAYMENT' }]
+          : [],
       });
       if (paid && c.close <= this.today) {
         // pagamento: débito na conta corrente + crédito no cartão
         balance -= c.total;
-        this.addTx({ accountId: checking, date: at(c.due), description: isNu ? 'Pagamento de fatura' : 'ITAU CARTOES PAGTO FATURA', type: 'DEBIT', amount: -c.total }, at(c.due));
-        this.addTx({ accountId: card, date: at(c.due), description: 'Pagamento recebido', type: 'CREDIT', amount: -c.total, creditCardMetadata: { billId } }, at(c.due));
+        this.addTx(
+          {
+            accountId: checking,
+            date: at(c.due),
+            description: isNu ? 'Pagamento de fatura' : 'ITAU CARTOES PAGTO FATURA',
+            type: 'DEBIT',
+            amount: -c.total,
+          },
+          at(c.due),
+        );
+        this.addTx(
+          {
+            accountId: card,
+            date: at(c.due),
+            description: 'Pagamento recebido',
+            type: 'CREDIT',
+            amount: -c.total,
+            creditCardMetadata: { billId },
+          },
+          at(c.due),
+        );
       }
     }
     this.bills.set(card, bills);
     const acc = this.accounts.get(checking)!;
     this.accounts.set(checking, { ...acc, balance: Math.round(balance * 100) / 100 });
-    const open = bills.filter((b) => b.dueDate > at(this.today)).reduce((s, b) => s + b.totalAmount, 0);
+    const open = bills
+      .filter((b) => b.dueDate > at(this.today))
+      .reduce((s, b) => s + b.totalAmount, 0);
     const cardAcc = this.accounts.get(card)!;
     this.accounts.set(card, { ...cardAcc, balance: Math.round(open * 100) / 100 });
 

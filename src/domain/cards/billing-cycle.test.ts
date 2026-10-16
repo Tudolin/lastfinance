@@ -1,23 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import { BusinessCalendar } from '../dates/business-days';
 import { localDate as d } from '../dates/local-date';
-import { assignToKnownBill, cashDateForDue, cycleForPurchase, inferCycleConfig, shiftCycle } from './billing-cycle';
+import {
+  assignToKnownBill,
+  cashDateForDue,
+  cycleForPurchase,
+  inferCycleConfig,
+  shiftCycle,
+} from './billing-cycle';
 
 const nubank = { closingDay: 3, dueDay: 10 };
 const lateClose = { closingDay: 28, dueDay: 5 };
 
 describe('ciclo da fatura', () => {
   it('compra antes do fechamento entra na fatura do mês', () => {
-    expect(cycleForPurchase(d('2026-10-02'), nubank)).toEqual({ closingDate: '2026-10-03', dueDate: '2026-10-10' });
+    expect(cycleForPurchase(d('2026-10-02'), nubank)).toEqual({
+      closingDate: '2026-10-03',
+      dueDate: '2026-10-10',
+    });
   });
 
   it('compra NO dia do fechamento vai para a fatura seguinte', () => {
-    expect(cycleForPurchase(d('2026-10-03'), nubank)).toEqual({ closingDate: '2026-11-03', dueDate: '2026-11-10' });
+    expect(cycleForPurchase(d('2026-10-03'), nubank)).toEqual({
+      closingDate: '2026-11-03',
+      dueDate: '2026-11-10',
+    });
   });
 
   it('vencimento no mês seguinte quando dueDay ≤ closingDay', () => {
-    expect(cycleForPurchase(d('2026-10-20'), lateClose)).toEqual({ closingDate: '2026-10-28', dueDate: '2026-11-05' });
-    expect(cycleForPurchase(d('2026-12-29'), lateClose)).toEqual({ closingDate: '2027-01-28', dueDate: '2027-02-05' });
+    expect(cycleForPurchase(d('2026-10-20'), lateClose)).toEqual({
+      closingDate: '2026-10-28',
+      dueDate: '2026-11-05',
+    });
+    expect(cycleForPurchase(d('2026-12-29'), lateClose)).toEqual({
+      closingDate: '2027-01-28',
+      dueDate: '2027-02-05',
+    });
   });
 
   it('fechamento no dia 31 em mês curto', () => {

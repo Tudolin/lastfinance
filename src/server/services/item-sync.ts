@@ -25,7 +25,12 @@ export const BACKFILL_DAYS = 365;
 export const INCREMENTAL_DAYS = 40;
 const MAX_PAGES_PER_ACCOUNT = 200;
 
-export type ItemSyncInput = { pluggyItemId: string; mode: 'backfill' | 'incremental'; trigger: SyncTrigger; runId: string };
+export type ItemSyncInput = {
+  pluggyItemId: string;
+  mode: 'backfill' | 'incremental';
+  trigger: SyncTrigger;
+  runId: string;
+};
 
 /**
  * Sincroniza um item inteiro em passos curtos e retomáveis:
@@ -44,10 +49,23 @@ export async function runItemSync(step: JobStep, input: ItemSyncInput) {
   const effectiveFrom = mode === 'backfill' ? addDays(today, -BACKFILL_DAYS) : from;
 
   const logId = await step.run('log-start', () =>
-    startSyncLog({ connectionId: conn.id, trigger: input.trigger, job: `item:${mode}`, runId: input.runId }),
+    startSyncLog({
+      connectionId: conn.id,
+      trigger: input.trigger,
+      job: `item:${mode}`,
+      runId: input.runId,
+    }),
   );
 
-  const counts = { transactions: 0, inserted: 0, updated: 0, deleted: 0, bills: 0, investments: 0, pages: 0 };
+  const counts = {
+    transactions: 0,
+    inserted: 0,
+    updated: 0,
+    deleted: 0,
+    bills: 0,
+    investments: 0,
+    pages: 0,
+  };
   try {
     const accounts = await step.run('accounts', () => syncAccounts(conn.id));
 
@@ -55,8 +73,9 @@ export async function runItemSync(step: JobStep, input: ItemSyncInput) {
       let after: string | null = null;
       let page = 0;
       do {
-        const r: Awaited<ReturnType<typeof syncTransactionsPage>> = await step.run(`tx:${acc.id}:${page}`, () =>
-          syncTransactionsPage(acc, { dateFrom: effectiveFrom, after }, input.runId),
+        const r: Awaited<ReturnType<typeof syncTransactionsPage>> = await step.run(
+          `tx:${acc.id}:${page}`,
+          () => syncTransactionsPage(acc, { dateFrom: effectiveFrom, after }, input.runId),
         );
         counts.transactions += r.count;
         counts.inserted += r.inserted;
@@ -66,8 +85,11 @@ export async function runItemSync(step: JobStep, input: ItemSyncInput) {
         page++;
       } while (after && page < MAX_PAGES_PER_ACCOUNT);
 
-      counts.deleted += await step.run(`gc:${acc.id}`, () => markMissingAsDeleted(acc.id, effectiveFrom, input.runId));
-      if (acc.kind === 'credit_card') counts.bills += await step.run(`bills:${acc.id}`, () => syncBills(acc));
+      counts.deleted += await step.run(`gc:${acc.id}`, () =>
+        markMissingAsDeleted(acc.id, effectiveFrom, input.runId),
+      );
+      if (acc.kind === 'credit_card')
+        counts.bills += await step.run(`bills:${acc.id}`, () => syncBills(acc));
     }
 
     counts.investments = await step.run('investments', () => syncInvestments(conn.id));

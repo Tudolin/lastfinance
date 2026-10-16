@@ -16,7 +16,9 @@ import {
 const PAGE_SIZE = 500; // máximo aceito pela API (acima disso responde 400)
 
 /** Busca todas as páginas de um endpoint paginado por número de página. */
-async function allPages<T>(fetchPage: (page: number) => Promise<{ results: T[]; totalPages: number }>): Promise<T[]> {
+async function allPages<T>(
+  fetchPage: (page: number) => Promise<{ results: T[]; totalPages: number }>,
+): Promise<T[]> {
   const out: T[] = [];
   let page = 1;
   for (;;) {
@@ -48,28 +50,40 @@ export class PluggySdkGateway implements PluggyGateway {
     return z.array(pluggyAccountSchema).parse(r.results);
   }
 
-  async fetchTransactionsPage(accountId: string, q: { dateFrom?: string; createdAtFrom?: string; ids?: string[]; after?: string | null }) {
+  async fetchTransactionsPage(
+    accountId: string,
+    q: { dateFrom?: string; createdAtFrom?: string; ids?: string[]; after?: string | null },
+  ) {
     const r = await this.sdk.fetchTransactionsCursor(accountId, {
       ...(q.dateFrom ? { dateFrom: q.dateFrom } : {}),
       ...(q.createdAtFrom ? { createdAtFrom: q.createdAtFrom } : {}),
       ...(q.ids ? { ids: q.ids } : {}),
       ...(q.after ? { after: q.after } : {}),
     });
-    return { results: z.array(pluggyTransactionSchema).parse(r.results), next: parseAfterCursor(r.next) };
+    return {
+      results: z.array(pluggyTransactionSchema).parse(r.results),
+      next: parseAfterCursor(r.next),
+    };
   }
 
   async fetchBills(accountId: string) {
-    const all = await allPages((page) => this.sdk.fetchCreditCardBills(accountId, { page, pageSize: PAGE_SIZE }));
+    const all = await allPages((page) =>
+      this.sdk.fetchCreditCardBills(accountId, { page, pageSize: PAGE_SIZE }),
+    );
     return z.array(pluggyBillSchema).parse(all);
   }
 
   async fetchInvestments(itemId: string) {
-    const all = await allPages((page) => this.sdk.fetchInvestments(itemId, undefined, { page, pageSize: PAGE_SIZE }));
+    const all = await allPages((page) =>
+      this.sdk.fetchInvestments(itemId, undefined, { page, pageSize: PAGE_SIZE }),
+    );
     return z.array(pluggyInvestmentSchema).parse(all);
   }
 
   async fetchInvestmentTransactions(investmentId: string) {
-    const all = await allPages((page) => this.sdk.fetchInvestmentTransactions(investmentId, { page, pageSize: PAGE_SIZE }));
+    const all = await allPages((page) =>
+      this.sdk.fetchInvestmentTransactions(investmentId, { page, pageSize: PAGE_SIZE }),
+    );
     return z.array(pluggyInvestmentTxSchema).parse(all);
   }
 
@@ -96,7 +110,9 @@ export async function getPluggy(): Promise<PluggyGateway> {
     return (gateway = getFakePluggy());
   }
   if (!e.PLUGGY_CLIENT_ID || !e.PLUGGY_CLIENT_SECRET) {
-    throw new Error('PLUGGY_CLIENT_ID/PLUGGY_CLIENT_SECRET não configurados (ou use PLUGGY_FAKE=true)');
+    throw new Error(
+      'PLUGGY_CLIENT_ID/PLUGGY_CLIENT_SECRET não configurados (ou use PLUGGY_FAKE=true)',
+    );
   }
   return (gateway = new PluggySdkGateway(e.PLUGGY_CLIENT_ID, e.PLUGGY_CLIENT_SECRET));
 }

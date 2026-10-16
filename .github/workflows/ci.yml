@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lastfinance_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Lint, formatação e tipos
+        run: |
+          pnpm lint
+          pnpm format:check
+          pnpm typecheck
+      - name: Migrações em dia com o schema
+        run: |
+          pnpm drizzle-kit generate --name ci_check
+          git diff --exit-code -- drizzle || (echo "::error::Schema mudou sem migração. Rode pnpm db:generate." && exit 1)
+      - name: Testes de unidade e integração
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+      - name: Playwright (Chromium)
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Testes E2E
+        run: pnpm test:e2e
+        env:
+          E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/lastfinance_e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7

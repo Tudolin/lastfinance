@@ -8,8 +8,10 @@ import { handle } from './handlers';
 import type { JobStep } from './step';
 
 /** Nossos passos só retornam dados já serializáveis em JSON, então o tipo "Jsonify" do Inngest é o próprio T. */
-function asJobStep(step: { run: (id: string, fn: () => Promise<unknown>) => Promise<unknown> }): JobStep {
-  return { run: <T,>(id: string, fn: () => Promise<T>) => step.run(id, fn) as Promise<T> };
+function asJobStep(step: {
+  run: (id: string, fn: () => Promise<unknown>) => Promise<unknown>;
+}): JobStep {
+  return { run: <T>(id: string, fn: () => Promise<T>) => step.run(id, fn) as Promise<T> };
 }
 
 export const inngest = new Inngest({ id: 'lastfinance' });
@@ -18,8 +20,18 @@ const webhookReceived = eventType('pluggy/webhook.received', { schema: webhookRe
 const itemSync = eventType('pluggy/item.sync', { schema: itemSyncData });
 
 export const processWebhookFn = inngest.createFunction(
-  { id: 'process-pluggy-webhook', triggers: [webhookReceived], retries: 5, idempotency: 'event.data.webhookEventId' },
-  async ({ event, step }) => handle(asJobStep(step), { name: 'pluggy/webhook.received', data: event.data }, event.id ?? 'no-id'),
+  {
+    id: 'process-pluggy-webhook',
+    triggers: [webhookReceived],
+    retries: 5,
+    idempotency: 'event.data.webhookEventId',
+  },
+  async ({ event, step }) =>
+    handle(
+      asJobStep(step),
+      { name: 'pluggy/webhook.received', data: event.data },
+      event.id ?? 'no-id',
+    ),
 );
 
 export const itemSyncFn = inngest.createFunction(
@@ -31,7 +43,8 @@ export const itemSyncFn = inngest.createFunction(
     concurrency: { key: 'event.data.pluggyItemId', limit: 1 },
     debounce: { key: 'event.data.pluggyItemId', period: '45s' },
   },
-  async ({ event, step, runId }) => handle(asJobStep(step), { name: 'pluggy/item.sync', data: event.data }, runId),
+  async ({ event, step, runId }) =>
+    handle(asJobStep(step), { name: 'pluggy/item.sync', data: event.data }, runId),
 );
 
 /**
@@ -40,19 +53,26 @@ export const itemSyncFn = inngest.createFunction(
  * para não gastar cota do Open Finance.
  */
 export const fallbackSyncFn = inngest.createFunction(
-  { id: 'fallback-sync', triggers: [{ cron: 'TZ=America/Sao_Paulo 15 */6 * * *' }, { event: 'app/fallback.requested' }] },
+  {
+    id: 'fallback-sync',
+    triggers: [{ cron: 'TZ=America/Sao_Paulo 15 */6 * * *' }, { event: 'app/fallback.requested' }],
+  },
   async ({ step }) => {
     const items = await step.run('list-items', async () =>
-      (await getDb()
-        .select({ pluggyItemId: schema.institutionConnection.pluggyItemId })
-        .from(schema.institutionConnection)
-        .where(isNull(schema.institutionConnection.deletedAt))).map((r) => r.pluggyItemId),
+      (
+        await getDb()
+          .select({ pluggyItemId: schema.institutionConnection.pluggyItemId })
+          .from(schema.institutionConnection)
+          .where(isNull(schema.institutionConnection.deletedAt))
+      ).map((r) => r.pluggyItemId),
     );
     await step.run('requeue-webhooks', () => requeueStuckWebhooks());
     if (items.length) {
       await step.sendEvent(
         'fan-out',
-        items.map((pluggyItemId) => itemSync.create({ pluggyItemId, mode: 'incremental', trigger: 'cron' })),
+        items.map((pluggyItemId) =>
+          itemSync.create({ pluggyItemId, mode: 'incremental', trigger: 'cron' }),
+        ),
       );
     }
     return { items: items.length };

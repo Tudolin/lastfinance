@@ -43,7 +43,11 @@ export function nationalHolidays(year: number): Holiday[] {
     { date: ymd(year, 12, 25), name: 'Natal', kind: 'national' },
   ];
   if (year >= 2024) {
-    list.push({ date: ymd(year, 11, 20), name: 'Dia Nacional de Zumbi e da Consciência Negra', kind: 'national' });
+    list.push({
+      date: ymd(year, 11, 20),
+      name: 'Dia Nacional de Zumbi e da Consciência Negra',
+      kind: 'national',
+    });
   }
   return list.sort((a, b) => (a.date < b.date ? -1 : 1));
 }

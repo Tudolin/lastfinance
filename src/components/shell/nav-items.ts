@@ -1,0 +1,33 @@
+import {
+  ArrowLeftRight,
+  Bot,
+  Briefcase,
+  CircleHelp,
+  CreditCard,
+  Home,
+  Landmark,
+  LineChart,
+  PiggyBank,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
+
+export type NavItem = { href: string; label: string; icon: LucideIcon; mobile?: boolean };
+
+/** Mesma ordem do design aprovado. `mobile` = aparece na barra inferior do celular. */
+export const NAV_ITEMS: NavItem[] = [
+  { href: '/', label: 'Painel', icon: Home, mobile: true },
+  { href: '/transacoes', label: 'Transações', icon: ArrowLeftRight, mobile: true },
+  { href: '/previsao', label: 'Previsão', icon: LineChart, mobile: true },
+  { href: '/posso-gastar', label: 'Posso gastar?', icon: CircleHelp, mobile: true },
+  { href: '/cartoes', label: 'Cartões', icon: CreditCard },
+  { href: '/orcamentos', label: 'Orçamentos', icon: Wallet },
+  { href: '/caixinhas', label: 'Caixinhas', icon: PiggyBank },
+  { href: '/renda', label: 'Renda', icon: Briefcase },
+  { href: '/assistente', label: 'Assistente', icon: Bot },
+  { href: '/contas', label: 'Contas conectadas', icon: Landmark },
+];
+
+export function isActive(pathname: string, href: string) {
+  return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+}

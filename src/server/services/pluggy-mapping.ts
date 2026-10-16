@@ -47,7 +47,9 @@ export function mapAccount(a: PluggyAccount) {
     balanceAt: new Date(),
     creditLimitCents: cd?.creditLimit != null ? toCents(cd.creditLimit) : null,
     availableLimitCents: cd?.availableCreditLimit != null ? toCents(cd.availableCreditLimit) : null,
-    closingDay: cd?.balanceCloseDate ? Number(pluggyDateToLocal(cd.balanceCloseDate).slice(8, 10)) : null,
+    closingDay: cd?.balanceCloseDate
+      ? Number(pluggyDateToLocal(cd.balanceCloseDate).slice(8, 10))
+      : null,
     dueDay: cd?.balanceDueDate ? Number(pluggyDateToLocal(cd.balanceDueDate).slice(8, 10)) : null,
     isActive: true,
   };
@@ -78,9 +80,13 @@ export function mapTransaction(t: PluggyTransaction, acc: { id: string; kind: Ac
   const date = pluggyDateToLocal(t.date);
   const amountCents = signedAmountCents(acc.kind, t.type, t.amount);
   const inst = resolveInstallment(t.creditCardMetadata, t.description);
-  const purchase = t.creditCardMetadata?.purchaseDate ? pluggyDateToLocal(t.creditCardMetadata.purchaseDate) : date;
+  const purchase = t.creditCardMetadata?.purchaseDate
+    ? pluggyDateToLocal(t.creditCardMetadata.purchaseDate)
+    : date;
   const counterpartyDoc =
-    amountCents < 0 ? t.paymentData?.receiver?.documentNumber?.value : t.paymentData?.payer?.documentNumber?.value;
+    amountCents < 0
+      ? t.paymentData?.receiver?.documentNumber?.value
+      : t.paymentData?.payer?.documentNumber?.value;
   return {
     accountId: acc.id,
     pluggyId: t.id,

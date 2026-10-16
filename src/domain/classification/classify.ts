@@ -70,9 +70,25 @@ export function classifyTransactions(input: ClassifyInput): Map<string, Classifi
   // 1) Decisões explícitas (usuário, depois regra). Transferências manuais ainda podem ganhar par.
   for (const t of txs) {
     if (t.userKind) {
-      result.set(t.id, finalize({ kind: t.userKind, source: 'user', confidence: 1, reason: 'definido pelo usuário' }));
+      result.set(
+        t.id,
+        finalize({
+          kind: t.userKind,
+          source: 'user',
+          confidence: 1,
+          reason: 'definido pelo usuário',
+        }),
+      );
     } else if (t.ruleKind) {
-      result.set(t.id, finalize({ kind: t.ruleKind, source: 'rule', confidence: 0.95, reason: 'regra de categorização' }));
+      result.set(
+        t.id,
+        finalize({
+          kind: t.ruleKind,
+          source: 'rule',
+          confidence: 0.95,
+          reason: 'regra de categorização',
+        }),
+      );
     }
   }
   const free = (t: ClassifiableTx) => !result.has(t.id);
@@ -81,9 +97,20 @@ export function classifyTransactions(input: ClassifyInput): Map<string, Classifi
   for (const t of txs) {
     if (!free(t) || !isCard(t)) continue;
     if (t.amountCents <= 0) {
-      result.set(t.id, finalize({ kind: 'expense', source: 'auto', confidence: 0.95, reason: 'compra no cartão' }));
+      result.set(
+        t.id,
+        finalize({ kind: 'expense', source: 'auto', confidence: 0.95, reason: 'compra no cartão' }),
+      );
     } else if (looksLikeCardPaymentOnCard(t.description)) {
-      result.set(t.id, finalize({ kind: 'card_payment', source: 'auto', confidence: 0.9, reason: 'crédito de pagamento na fatura' }));
+      result.set(
+        t.id,
+        finalize({
+          kind: 'card_payment',
+          source: 'auto',
+          confidence: 0.9,
+          reason: 'crédito de pagamento na fatura',
+        }),
+      );
     } else {
       result.set(
         t.id,
@@ -123,9 +150,25 @@ export function classifyTransactions(input: ClassifyInput): Map<string, Classifi
   for (const t of txs) {
     if (!free(t) || !isBank(t)) continue;
     if (t.amountCents < 0 && looksLikeInvestmentIn(t.description)) {
-      result.set(t.id, finalize({ kind: 'investment_in', source: 'auto', confidence: 0.9, reason: 'aplicação em investimento' }));
+      result.set(
+        t.id,
+        finalize({
+          kind: 'investment_in',
+          source: 'auto',
+          confidence: 0.9,
+          reason: 'aplicação em investimento',
+        }),
+      );
     } else if (t.amountCents > 0 && looksLikeInvestmentOut(t.description)) {
-      result.set(t.id, finalize({ kind: 'investment_out', source: 'auto', confidence: 0.9, reason: 'resgate de investimento' }));
+      result.set(
+        t.id,
+        finalize({
+          kind: 'investment_out',
+          source: 'auto',
+          confidence: 0.9,
+          reason: 'resgate de investimento',
+        }),
+      );
     }
   }
 
@@ -193,7 +236,12 @@ export function classifyTransactions(input: ClassifyInput): Map<string, Classifi
     if (isOwnDoc(t, ownDocHashes)) {
       result.set(
         t.id,
-        finalize({ kind: 'internal_transfer', source: 'auto', confidence: 0.75, reason: 'contraparte é o próprio titular' }),
+        finalize({
+          kind: 'internal_transfer',
+          source: 'auto',
+          confidence: 0.75,
+          reason: 'contraparte é o próprio titular',
+        }),
       );
     }
   }
@@ -213,7 +261,10 @@ export function classifyTransactions(input: ClassifyInput): Map<string, Classifi
         }),
       );
     } else {
-      result.set(t.id, finalize({ kind: 'expense', source: 'auto', confidence: 0.8, reason: 'saída da conta' }));
+      result.set(
+        t.id,
+        finalize({ kind: 'expense', source: 'auto', confidence: 0.8, reason: 'saída da conta' }),
+      );
     }
   }
 
@@ -227,16 +278,26 @@ function isOwnDoc(t: ClassifiableTx, own: ReadonlySet<string>): boolean {
 }
 
 /** Fatura cujo total, mínimo ou algum pagamento registrado bate com o débito, perto do vencimento. */
-export function bestBillMatch(t: ClassifiableTx, bills: readonly ClassifiableBill[]): ClassifiableBill | null {
+export function bestBillMatch(
+  t: ClassifiableTx,
+  bills: readonly ClassifiableBill[],
+): ClassifiableBill | null {
   const paid = -t.amountCents;
   let best: { bill: ClassifiableBill; gap: number } | null = null;
   for (const b of bills) {
     const offset = diffDays(t.date, b.dueDate);
-    if (offset < -CLASSIFY_PARAMS.billWindowBeforeDue || offset > CLASSIFY_PARAMS.billWindowAfterDue) continue;
-    const amounts = [b.totalCents, b.minimumCents, ...b.paymentsCents].filter((v): v is number => v != null && v > 0);
+    if (
+      offset < -CLASSIFY_PARAMS.billWindowBeforeDue ||
+      offset > CLASSIFY_PARAMS.billWindowAfterDue
+    )
+      continue;
+    const amounts = [b.totalCents, b.minimumCents, ...b.paymentsCents].filter(
+      (v): v is number => v != null && v > 0,
+    );
     if (!amounts.includes(paid)) continue;
     const gap = Math.abs(offset);
-    if (!best || gap < best.gap || (gap === best.gap && b.id < best.bill.id)) best = { bill: b, gap };
+    if (!best || gap < best.gap || (gap === best.gap && b.id < best.bill.id))
+      best = { bill: b, gap };
   }
   return best?.bill ?? null;
 }
@@ -248,8 +309,12 @@ function linkCardPayments(
   accountKind: Map<string, AccountKind>,
 ) {
   const kindOf = (t: ClassifiableTx) => result.get(t.id)?.kind;
-  const bankSide = txs.filter((t) => kindOf(t) === 'card_payment' && accountKind.get(t.accountId) !== 'credit_card');
-  const cardSide = txs.filter((t) => kindOf(t) === 'card_payment' && accountKind.get(t.accountId) === 'credit_card');
+  const bankSide = txs.filter(
+    (t) => kindOf(t) === 'card_payment' && accountKind.get(t.accountId) !== 'credit_card',
+  );
+  const cardSide = txs.filter(
+    (t) => kindOf(t) === 'card_payment' && accountKind.get(t.accountId) === 'credit_card',
+  );
   const used = new Set<string>();
   const pairs: { bank: ClassifiableTx; card: ClassifiableTx; gap: number }[] = [];
   for (const b of bankSide) {
@@ -259,7 +324,9 @@ function linkCardPayments(
       if (gap <= CLASSIFY_PARAMS.cardPaymentLinkMaxDays) pairs.push({ bank: b, card: c, gap });
     }
   }
-  pairs.sort((a, b) => a.gap - b.gap || (a.bank.id < b.bank.id ? -1 : 1) || (a.card.id < b.card.id ? -1 : 1));
+  pairs.sort(
+    (a, b) => a.gap - b.gap || (a.bank.id < b.bank.id ? -1 : 1) || (a.card.id < b.card.id ? -1 : 1),
+  );
   for (const p of pairs) {
     if (used.has(p.bank.id) || used.has(p.card.id)) continue;
     used.add(p.bank.id);
@@ -288,7 +355,8 @@ function linkRefunds(txs: readonly ClassifiableTx[], result: Map<string, Classif
       const exact = -e.amountCents === r.amountCents;
       if (sim < (exact ? 0.2 : 0.34)) continue;
       const score = sim + (exact ? 0.5 : 0) - age / 1000;
-      if (!best || score > best.score || (score === best.score && e.id < best.t.id)) best = { t: e, score };
+      if (!best || score > best.score || (score === best.score && e.id < best.t.id))
+        best = { t: e, score };
     }
     if (best) result.set(r.id, { ...cls, refundOfTransactionId: best.t.id });
   }
