@@ -6,7 +6,9 @@ import { KindBadge } from '@/components/ui/badge';
 import { Card, CardTitle } from '@/components/ui/card';
 import { TX_KIND_LABEL } from '@/domain/classification/types';
 import { formatBR, type LocalDate } from '@/domain/dates/local-date';
+import { getCategories, getSplits } from '@/server/queries/categories';
 import { getTransaction } from '@/server/queries/transactions';
+import { CategoryEditor, SplitEditor } from './category-editor';
 import { EditTransactionForm } from './edit-form';
 
 export const metadata = { title: 'Transação' };
@@ -18,6 +20,18 @@ export default async function TransactionPage({ params }: { params: Promise<{ id
   if (!data) notFound();
   const t = data.t;
   const isCard = data.accountKind === 'credit_card';
+  const categorizable = t.kind === 'expense' || t.kind === 'income' || t.kind === 'refund';
+  const [categories, splits] = categorizable
+    ? await Promise.all([getCategories(), getSplits(t.id)])
+    : [[], []];
+  const catKind = t.kind === 'income' ? 'income' : 'expense';
+  const SOURCE_LABEL: Record<string, string> = {
+    user: 'Escolhida por você.',
+    rule: 'Definida por uma regra.',
+    merchant: 'Pelo histórico deste estabelecimento.',
+    ai: `Sugerida pela IA · confiança ${Math.round((t.categoryConfidence ?? 0) * 100)}%. Confirme ou corrija.`,
+    link: 'Herdada da compra original (estorno).',
+  };
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
       <Link
@@ -89,6 +103,30 @@ export default async function TransactionPage({ params }: { params: Promise<{ id
           </div>
         ) : null}
       </Card>
+      {categorizable ? (
+        <Card className="flex flex-col gap-4">
+          <CardTitle>Categoria</CardTitle>
+          <CategoryEditor
+            transactionId={t.id}
+            categoryId={t.categoryId}
+            categories={categories}
+            kind={catKind}
+            sourceLabel={t.categorySource ? SOURCE_LABEL[t.categorySource]! : null}
+          />
+          <SplitEditor
+            transactionId={t.id}
+            totalCents={t.amountCents}
+            initial={splits}
+            categories={categories}
+            kind={catKind}
+          />
+        </Card>
+      ) : (
+        <Card className="text-sm text-ink-2">
+          {TX_KIND_LABEL[t.kind]} não recebe categoria: não conta como receita nem como despesa. Se
+          o tipo estiver errado, corrija abaixo.
+        </Card>
+      )}
       <Card className="flex flex-col gap-4">
         <CardTitle>Editar</CardTitle>
         <EditTransactionForm

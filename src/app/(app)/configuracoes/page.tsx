@@ -1,4 +1,4 @@
-import { ChevronRight, LogOut, MonitorSmartphone, Shield } from 'lucide-react';
+import { ChevronRight, LogOut, MonitorSmartphone, Shield, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { logoutAction } from '@/app/(auth)/actions';
 import { PageHeader } from '@/components/shell/page-header';
@@ -30,6 +30,12 @@ export default function SettingsPage() {
           Shield,
           'Segurança',
           'Digital (passkeys), bloqueio do app, 2FA e senha',
+        )}
+        {item(
+          '/configuracoes/preferencias',
+          SlidersHorizontal,
+          'Preferências',
+          'Meta de poupança e limites da IA',
         )}
         {item(
           '/configuracoes/sessoes',

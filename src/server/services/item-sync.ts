@@ -2,6 +2,7 @@ import 'server-only';
 import { addDays, todaySP, type LocalDate } from '@/domain/dates/local-date';
 import type { JobStep } from '@/server/jobs/step';
 import { log } from '@/server/log';
+import { categorizePending } from './categorize';
 import { postprocess } from './postprocess';
 import {
   finishSyncLog,
@@ -94,6 +95,10 @@ export async function runItemSync(step: JobStep, input: ItemSyncInput) {
 
     counts.investments = await step.run('investments', () => syncInvestments(conn.id));
     await step.run('postprocess', () => postprocess(today));
+    // Carga histórica vai em lote (Message Batches, 50% mais barato); incrementais, na hora.
+    await step.run('categorize', () =>
+      categorizePending({ mode: mode === 'backfill' ? 'batch' : 'sync', maxAiMerchants: 400 }),
+    );
     await step.run('log-finish', async () => {
       await markConnectionSynced(conn.id, mode === 'backfill');
       await finishSyncLog(logId, { status: 'success', counts });

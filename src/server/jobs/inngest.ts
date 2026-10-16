@@ -3,7 +3,8 @@ import { Inngest, eventType } from 'inngest';
 import { requeueStuckWebhooks } from '@/server/services/webhooks';
 import { getDb, schema } from '@/server/db/client';
 import { isNull } from 'drizzle-orm';
-import { itemSyncData, webhookReceivedData } from './events';
+import { aiBatchData, itemSyncData, webhookReceivedData } from './events';
+import { applyBatchJob } from '@/server/services/categorize';
 import { handle } from './handlers';
 import type { JobStep } from './step';
 
@@ -18,6 +19,7 @@ export const inngest = new Inngest({ id: 'lastfinance' });
 
 const webhookReceived = eventType('pluggy/webhook.received', { schema: webhookReceivedData });
 const itemSync = eventType('pluggy/item.sync', { schema: itemSyncData });
+const aiBatch = eventType('ai/batch.submitted', { schema: aiBatchData });
 
 export const processWebhookFn = inngest.createFunction(
   {
@@ -79,4 +81,20 @@ export const fallbackSyncFn = inngest.createFunction(
   },
 );
 
-export const functions = [processWebhookFn, itemSyncFn, fallbackSyncFn];
+/**
+ * Carga histórica de categorização via Message Batches (50% mais barato): espera o lote terminar
+ * (normalmente < 1 h, no máximo 24 h) com sleeps duráveis e aplica os resultados.
+ */
+export const applyAiBatchFn = inngest.createFunction(
+  { id: 'apply-ai-batch', triggers: [aiBatch], retries: 3, concurrency: { limit: 1 } },
+  async ({ event, step }) => {
+    for (let i = 0; i < 300; i++) {
+      const r = await step.run(`check-${i}`, () => applyBatchJob(event.data.jobId));
+      if (r.ended) return r;
+      await step.sleep(`wait-${i}`, '5m');
+    }
+    return { ended: false };
+  },
+);
+
+export const functions = [processWebhookFn, itemSyncFn, fallbackSyncFn, applyAiBatchFn];

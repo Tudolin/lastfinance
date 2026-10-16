@@ -35,6 +35,7 @@ export const transactionFiltersSchema = z.object({
   min: z.coerce.number().nonnegative().optional(),
   max: z.coerce.number().nonnegative().optional(),
   basis: z.enum(['cash', 'accrual']).default('cash'),
+  category: z.union([z.string().uuid(), z.literal('none')]).optional(),
   page: z.coerce.number().int().min(1).default(1),
 });
 export type TransactionFilters = z.infer<typeof transactionFiltersSchema>;
@@ -47,6 +48,12 @@ export async function listTransactions(f: TransactionFilters) {
   const where: SQL[] = [isNull(tx.deletedAt)];
   if (f.account) where.push(eq(tx.accountId, f.account));
   if (f.kind) where.push(eq(tx.kind, f.kind));
+  if (f.category === 'none')
+    where.push(and(isNull(tx.categoryId), inArray(tx.kind, ['expense', 'income', 'refund']))!);
+  else if (f.category)
+    where.push(
+      sql`(${tx.categoryId} = ${f.category} or exists (select 1 from transaction_split s where s.transaction_id = ${tx.id} and s.category_id = ${f.category}) or ${tx.categoryId} in (select id from category where parent_id = ${f.category}))`,
+    );
   if (f.from) where.push(gte(dateCol, f.from));
   if (f.to) where.push(lte(dateCol, f.to));
   if (f.min != null) where.push(sql`abs(${tx.amountCents}) >= ${Math.round(f.min * 100)}`);
@@ -80,6 +87,8 @@ export async function listTransactions(f: TransactionFilters) {
       installmentNumber: tx.installmentNumber,
       installmentTotal: tx.installmentTotal,
       notes: tx.notes,
+      categoryId: tx.categoryId,
+      categorySource: tx.categorySource,
       accountId: tx.accountId,
       accountName: account.name,
       accountKind: account.kind,

@@ -5,7 +5,9 @@ import { classifyTransactions } from '@/domain/classification/classify';
 import type { ClassifiableTx, TxKind } from '@/domain/classification/types';
 import { bankingCalendar } from '@/domain/dates/business-days';
 import { addDays, todaySP, type LocalDate } from '@/domain/dates/local-date';
+import { firstMatchingRule } from '@/domain/categorization/rules';
 import { getDb, schema } from '@/server/db/client';
+import { loadRules } from './categorize';
 
 const { account, transaction, creditCardBill, ownDocument } = schema;
 
@@ -34,7 +36,7 @@ export async function postprocess(today: LocalDate = todaySP()) {
   const db = getDb();
   const from = addDays(today, -POSTPROCESS_WINDOW_DAYS);
 
-  const [accounts, bills, docs, txs] = await Promise.all([
+  const [accounts, bills, docs, txs, rules] = await Promise.all([
     db.select().from(account),
     db.select().from(creditCardBill),
     db.select().from(ownDocument),
@@ -42,6 +44,7 @@ export async function postprocess(today: LocalDate = todaySP()) {
       .select()
       .from(transaction)
       .where(and(isNull(transaction.deletedAt), gte(transaction.date, from))),
+    loadRules().then((rs) => rs.filter((r) => r.actions.kind)),
   ]);
 
   const accountById = new Map(accounts.map((a) => [a.id, a]));
@@ -62,7 +65,13 @@ export async function postprocess(today: LocalDate = todaySP()) {
       description: t.srcDescription,
       counterpartyDocHash: t.counterpartyDocHash,
       userKind: t.userKind,
-      ruleKind: null,
+      // Regras que definem o tipo (ex.: "PIX PARA MAE → transferência") entram na classificação.
+      ruleKind:
+        firstMatchingRule(rules, {
+          description: t.srcDescription,
+          accountId: t.accountId,
+          amountCents: t.amountCents,
+        })?.actions.kind ?? null,
     })),
     bills: bills.map((b) => ({
       id: b.id,

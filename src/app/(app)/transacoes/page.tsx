@@ -1,6 +1,8 @@
 import { Search } from 'lucide-react';
 import Link from 'next/link';
+import { CategorySelect, labelFor } from '@/components/categories/category-select';
 import { PageHeader } from '@/components/shell/page-header';
+import { getCategories } from '@/server/queries/categories';
 import { BasisToggle } from '@/components/tx/basis-toggle';
 import { TransactionRow } from '@/components/tx/transaction-row';
 import { buttonVariants } from '@/components/ui/button';
@@ -32,9 +34,10 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     Object.fromEntries(Object.entries(sp).filter(([, v]) => typeof v === 'string' && v !== '')),
   );
   const f = parsed.success ? parsed.data : transactionFiltersSchema.parse({});
-  const [{ rows, hasMore }, accounts] = await Promise.all([
+  const [{ rows, hasMore }, accounts, categories] = await Promise.all([
     listTransactions(f),
     listAccountsForFilter(),
+    getCategories(),
   ]);
 
   const groups = new Map<string, typeof rows>();
@@ -90,6 +93,17 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
               </option>
             ))}
           </select>
+          <label className="sr-only" htmlFor="category">
+            Categoria
+          </label>
+          <CategorySelect
+            id="category"
+            name="category"
+            categories={categories}
+            emptyLabel="Todas as categorias"
+            defaultValue={f.category ?? ''}
+            className={selectCls}
+          />
           <label className="flex items-center gap-1.5 text-[13px] font-bold text-ink-2">
             De
             <input type="date" name="from" defaultValue={f.from} className={selectCls} />
@@ -143,7 +157,10 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
                 {weekdayDate(date as LocalDate)}
               </h2>
               {items.map((t) => (
-                <TransactionRow key={t.id} t={t} />
+                <TransactionRow
+                  key={t.id}
+                  t={{ ...t, categoryLabel: labelFor(t.categoryId, categories) }}
+                />
               ))}
             </Card>
           ))}
