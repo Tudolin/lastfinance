@@ -13,6 +13,10 @@ export const userSettingsSchema = z.object({
   aiMonthlyBudgetUsd: z.number().min(0).max(1000).default(5),
   /** Abaixo desta confiança, a categoria sugerida pela IA vai para a fila de revisão. */
   aiReviewThreshold: z.number().min(0).max(1).default(0.7),
+  /** Reserva mínima: abaixo dela, "Posso gastar?" avisa (centavos). */
+  reserveMinCents: z.number().int().min(0).max(100_000_000).default(50000),
+  /** Como estimar o gasto variável na previsão: média de 3 ou 6 meses, ou pelos orçamentos. */
+  forecastVariableMode: z.enum(['avg3', 'avg6', 'budget']).default('avg3'),
   /** Anti-replay do TOTP: último contador aceito. */
   totpLastCounter: z.number().int().optional(),
 });

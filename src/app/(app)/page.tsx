@@ -11,6 +11,7 @@ import { monthTitle, shortDate, weekdayDate } from '@/lib/format';
 import { getBalances, getConnections, getOpenBills } from '@/server/queries/accounts';
 import { requireUnlocked } from '@/server/auth/request';
 import { categoryBreakdown, countPendingReview, getCategories } from '@/server/queries/categories';
+import { getForecastView } from '@/server/queries/forecast';
 import { getBudgets } from '@/server/queries/planning';
 import { listTransactions, summarize } from '@/server/queries/transactions';
 
@@ -60,6 +61,7 @@ export default async function DashboardPage({
     categories,
     reviewCount,
     budgets,
+    forecast,
   ] = await Promise.all([
     getBalances(),
     getOpenBills(today),
@@ -71,7 +73,14 @@ export default async function DashboardPage({
     getCategories(),
     countPendingReview(),
     getBudgets(today),
+    getForecastView(30),
   ]);
+  const forecastVerdict =
+    forecast.base.min.balance < 0
+      ? 'no'
+      : forecast.base.min.balance < forecast.reserveCents
+        ? 'warn'
+        : 'ok';
   const goal = session.settings.savingsGoalPct;
   // agrega por categoria-mãe para o resumo
   const byRoot = new Map<string | null, number>();
@@ -104,19 +113,38 @@ export default async function DashboardPage({
       </PageHeader>
 
       <section aria-label="Resumo" className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="flex flex-col gap-3 rounded-[18px] border border-border bg-surface-2 p-6 lg:col-span-2">
+        <Link
+          href="/previsao"
+          className={`flex flex-col gap-3 rounded-[18px] border p-6 text-ink no-underline lg:col-span-2 ${
+            forecastVerdict === 'ok'
+              ? 'border-transparent bg-primary-soft'
+              : forecastVerdict === 'warn'
+                ? 'border-warn-border bg-warn-soft'
+                : 'border-transparent bg-danger-soft'
+          }`}
+        >
           <span className="flex items-center gap-2 text-xs font-extrabold tracking-wider text-ink-2 uppercase">
             <LineChart className="size-4" aria-hidden="true" />
-            Previsão de caixa
+            Previsão de caixa · 30 dias
           </span>
-          <p className="text-xl leading-snug font-bold">
-            “Meus gastos futuros cabem no meu dinheiro?”
+          <p className="text-xl leading-snug font-bold" data-testid="dashboard-verdict">
+            {forecastVerdict === 'ok'
+              ? 'Seus gastos previstos cabem no seu dinheiro.'
+              : forecastVerdict === 'warn'
+                ? 'Cabe, mas o saldo encosta na reserva mínima.'
+                : `O saldo previsto fica negativo${forecast.base.firstNegative ? ` em ${shortDate(forecast.base.firstNegative)}` : ''}.`}
           </p>
-          <p className="text-sm text-ink-2">
-            O veredito, o dia de menor saldo e o “livre para gastar” chegam na Fase 3, quando entram
-            receitas previstas, recorrências e parcelas futuras. Os dados abaixo já são reais.
-          </p>
-        </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+            <span>
+              Menor saldo: <Money cents={forecast.base.min.balance} className="font-extrabold" /> em{' '}
+              {shortDate(forecast.base.min.date)}
+            </span>
+            <span>
+              Livre por dia: <Money cents={forecast.free.cents} className="font-extrabold" /> até{' '}
+              {shortDate(forecast.free.until)}
+            </span>
+          </div>
+        </Link>
         <Card className="flex flex-col gap-1.5">
           <span className="text-[13px] font-semibold text-ink-2">Saldo em conta</span>
           <Money cents={balances.cashCents} className="text-[32px] font-extrabold tracking-tight" />

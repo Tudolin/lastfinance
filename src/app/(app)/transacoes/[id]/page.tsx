@@ -54,9 +54,7 @@ export default async function TransactionPage({ params }: { params: Promise<{ id
         </div>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
           <div>
-            <dt className="font-semibold text-ink-2">
-              {isCard ? 'Data da compra (competência)' : 'Data'}
-            </dt>
+            <dt className="font-semibold text-ink-2">{isCard ? 'Data (competência)' : 'Data'}</dt>
             <dd className="font-bold">{formatBR(t.competenceDate as LocalDate)}</dd>
           </div>
           <div>

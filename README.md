@@ -12,6 +12,11 @@ Plano completo, schema e fases em [`docs/PLANO.md`](docs/PLANO.md).
   carga histórica via Message Batches) e fila de revisão; divisão de transações e tags; análise de fixas × variáveis ×
   eventuais; painel com meta de poupança e gastos por categoria; orçamentos com ritmo e sobra; cartões com parcelas futuras,
   melhor dia de compra e comprometimento da renda.
+- **3** — fontes de renda (CLT, PJ e outras) com calculadora de líquido (INSS, IRRF com a redução da Lei 15.270, legal ×
+  simplificado, vários vínculos e estimativa do ajuste anual; MEI, Simples com fator R, Presumido), regras de pagamento em
+  dias úteis, 13º, férias, PLR e bônus; recorrências detectadas; gastos planejados; conciliação Planejado × Realizado;
+  previsão de caixa dia a dia para 30/60/90 dias com faixa de incerteza e cenários; **Posso gastar?** e "livre para gastar
+  por dia".
 
 ## Stack
 
@@ -169,6 +174,34 @@ Pipeline em camadas, para gastar o mínimo:
   Preferências, com aviso aos 80%. Para ~5 mil transações/ano o custo esperado é de centavos de dólar.
 - Eval: `pnpm tsx scripts/eval-categorization.ts` mede a acurácia num conjunto fixo de 45 estabelecimentos
   (`tests/evals/categorization.json`; meta ≥ 90%). Custa poucos centavos; use `--fake` para testar o harness.
+
+## Previsão, renda e "Posso gastar?"
+
+Três camadas que nunca se misturam: **Realizado** (só a Pluggy escreve), **Planejado** (`forecast_entry`, gerado por
+regras) e, na Fase 6, **Hipotético** (cenários em memória).
+
+- **Renda** (`/renda`): cada fonte tem histórico de salário com vigência, regra de pagamento (N-ésimo dia útil, dia fixo,
+  último dia útil, adiantamento + saldo; sábado conta para o prazo da CLT, mas o crédito cai no dia útil bancário) e
+  eventos (13º em duas parcelas, férias com 1/3, PLR, bônus). O líquido é calculado pelas **tabelas fiscais versionadas**
+  em `tax_table` (semeadas com as de 2026: INSS, IRRF, Lei 15.270 mensal e anual, Simples III/V, MEI, Presumido, retenção
+  de dividendos). Quando sair uma tabela nova, cadastre outra linha com a nova vigência; o código não muda. ⚠️ Os valores
+  vieram de fontes secundárias (conferidas em 16/10/2026): confirme no DOU/RFB, em especial a tabela anual.
+- **Recorrências** (`/recorrencias`): o app detecta cobranças com intervalo regular (semanal, mensal, anual) e sugere;
+  só as **confirmadas** entram na previsão. Ignoradas não voltam.
+- **Gastos planejados** (`/planejados`): no crédito, cada parcela cai na fatura certa e sai do caixa no vencimento.
+- **Conciliação** (`/previsao/conciliacao`): cada previsto procura a transação real na janela de dias úteis, com
+  tolerância de valor e semelhança com o empregador/estabelecimento; pareamento 1:1 (uma transação nunca conta duas
+  vezes). Sem par até o fim da janela, o previsto fica **atrasado**. Dá para casar à mão, desfazer (o par não volta),
+  ajustar o valor ou cancelar. Rendas em modo **calibrado** aprendem o fator real ÷ calculado.
+- **Previsão** (`/previsao`): um motor só (`domain/forecast/project.ts`, função pura) parte do saldo das contas e soma
+  previstos em aberto (atrasados entram hoje), faturas já gastas no cartão, parcelas futuras e o gasto variável estimado
+  (média de 3/6 meses ou orçamentos, sem contar recorrentes e parcelas; no cartão, sai no vencimento). A faixa de incerteza
+  vem dos previstos estimados e do desvio histórico do gasto variável; há cenários conservador e otimista.
+- **Posso gastar?** (`/posso-gastar`): roda a mesma projeção com e sem a compra (Pix/débito no dia; crédito parcelado nas
+  faturas). ✅ cabe acima da reserva mínima; ⚠️ fura a reserva ou fica negativo no conservador; ❌ fica negativo. A reserva
+  mínima e o modo do gasto variável ficam em Configurações → Preferências.
+- Tudo é recalculado depois de cada sincronização (`refreshPlanning`: calibra → regenera → concilia → detecta) e a cada
+  edição; a geração é idempotente (`UNIQUE (source_type, source_id, expected_date)`) e não altera o que já foi realizado.
 
 ## Segurança
 

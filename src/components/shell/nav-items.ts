@@ -10,6 +10,8 @@ import {
   Tags,
   LineChart,
   PiggyBank,
+  Repeat,
+  ShoppingBag,
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
@@ -28,6 +30,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/analise', label: 'Fixas × variáveis', icon: PieChart },
   { href: '/caixinhas', label: 'Caixinhas', icon: PiggyBank },
   { href: '/renda', label: 'Renda', icon: Briefcase },
+  { href: '/recorrencias', label: 'Recorrências', icon: Repeat },
+  { href: '/planejados', label: 'Gastos planejados', icon: ShoppingBag },
   { href: '/assistente', label: 'Assistente', icon: Bot },
   { href: '/contas', label: 'Contas conectadas', icon: Landmark },
 ];

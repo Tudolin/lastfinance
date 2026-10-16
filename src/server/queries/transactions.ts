@@ -52,7 +52,7 @@ export async function listTransactions(f: TransactionFilters) {
     where.push(and(isNull(tx.categoryId), inArray(tx.kind, ['expense', 'income', 'refund']))!);
   else if (f.category)
     where.push(
-      sql`(${tx.categoryId} = ${f.category} or exists (select 1 from transaction_split s where s.transaction_id = ${tx.id} and s.category_id = ${f.category}) or ${tx.categoryId} in (select id from category where parent_id = ${f.category}))`,
+      sql`(${tx.categoryId} = ${f.category} or exists (select 1 from transaction_split s where s.transaction_id = "transaction"."id" and s.category_id = ${f.category}) or ${tx.categoryId} in (select id from category where parent_id = ${f.category}))`,
     );
   if (f.from) where.push(gte(dateCol, f.from));
   if (f.to) where.push(lte(dateCol, f.to));
