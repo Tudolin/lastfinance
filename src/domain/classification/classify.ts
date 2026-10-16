@@ -152,7 +152,8 @@ export function classifyTransactions(input: ClassifyInput): Map<string, Classifi
       if (bdays > CLASSIFY_PARAMS.transferMaxBusinessDays) continue;
       let score = 0.5 - 0.08 * bdays;
       if (looksLikeTransfer(o.description) || looksLikeTransfer(i.description)) score += 0.25;
-      if (isOwnDoc(o, ownDocHashes) || isOwnDoc(i, ownDocHashes)) score += 0.35;
+      const ownSides = Number(isOwnDoc(o, ownDocHashes)) + Number(isOwnDoc(i, ownDocHashes));
+      if (ownSides > 0) score += 0.35 + (ownSides === 2 ? 0.1 : 0);
       if (result.get(o.id)?.source === 'user' || result.get(i.id)?.source === 'user') score += 0.5;
       if (score >= CLASSIFY_PARAMS.transferMinScore) cands.push({ out: o, in: i, score, gap });
     }
