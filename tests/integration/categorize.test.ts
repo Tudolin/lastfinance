@@ -167,13 +167,11 @@ describe('categorização em camadas', () => {
 
   it('regra de tipo entra na classificação (ex.: Pix para a mãe é transferência)', async () => {
     await sync('fake-item-itau');
-    await db
-      .insert(categorizationRule)
-      .values({
-        name: 'padaria',
-        conditions: { descriptionContains: ['padaria sao'] },
-        actions: { kind: 'internal_transfer' },
-      });
+    await db.insert(categorizationRule).values({
+      name: 'padaria',
+      conditions: { descriptionContains: ['padaria sao'] },
+      actions: { kind: 'internal_transfer' },
+    });
     await postprocess();
     const rows = await txBy('PADARIA');
     expect(rows.every((t) => t.kind === 'internal_transfer' && t.kindSource === 'rule')).toBe(true);

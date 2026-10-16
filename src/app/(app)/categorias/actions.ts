@@ -273,16 +273,14 @@ export async function setSplitsAction(transactionId: string, rawParts: unknown):
         error: `A soma das partes (${(sum / 100).toFixed(2)}) precisa ser igual ao valor da transação (${(Math.abs(t.amountCents) / 100).toFixed(2)}).`,
       };
     }
-    await db
-      .insert(schema.transactionSplit)
-      .values(
-        parts.data.map((p, i) => ({
-          transactionId: t.id,
-          categoryId: p.categoryId,
-          amountCents: sign * cents[i]!,
-          note: p.note ?? null,
-        })),
-      );
+    await db.insert(schema.transactionSplit).values(
+      parts.data.map((p, i) => ({
+        transactionId: t.id,
+        categoryId: p.categoryId,
+        amountCents: sign * cents[i]!,
+        note: p.note ?? null,
+      })),
+    );
   }
   refresh();
   revalidatePath(`/transacoes/${transactionId}`);
