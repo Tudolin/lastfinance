@@ -43,13 +43,34 @@ export type Env = z.infer<typeof schema> & { appUrl: string };
 
 let cached: Env | undefined;
 
+const HINTS: Record<string, string> = {
+  DATABASE_URL: 'conecte o Neon em Storage (cria DATABASE_URL e DATABASE_URL_UNPOOLED)',
+  SESSION_SECRET: 'gere com: openssl rand -base64 48',
+  DATA_ENCRYPTION_KEY: 'gere com: openssl rand -base64 32 (cole exatamente, sem espaços)',
+  SETUP_TOKEN: 'gere com: openssl rand -hex 16',
+  CRON_SECRET: 'gere com: openssl rand -hex 16',
+  PLUGGY_WEBHOOK_SECRET: 'gere com: openssl rand -hex 32',
+};
+
+/** Lista os problemas das variáveis (nome + regra + dica), sem nunca incluir os valores. */
+export function checkEnv(source: Record<string, string | undefined>): string[] {
+  const parsed = schema.safeParse(source);
+  if (parsed.success) return [];
+  return parsed.error.issues.map((i) => {
+    const name = i.path.join('.');
+    const missing = source[name] == null || source[name] === '';
+    const hint = HINTS[name] ? ` — ${HINTS[name]}` : '';
+    return `${name}: ${missing ? 'não definida' : i.message}${hint}`;
+  });
+}
+
 /** Lê e valida as variáveis de ambiente (memoizado). Lança erro descritivo se algo estiver faltando. */
 export function env(): Env {
   if (cached) return cached;
   const parsed = schema.safeParse(process.env);
   if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
+    const issues = checkEnv(process.env)
+      .map((p) => `  - ${p}`)
       .join('\n');
     throw new Error(`Variáveis de ambiente inválidas:\n${issues}`);
   }
