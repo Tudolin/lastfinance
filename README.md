@@ -3,9 +3,15 @@
 App web pessoal (single-user) de finanças em tempo real, alimentado pela Pluggy (Open Finance), em modo **somente leitura**.
 Plano completo, schema e fases em [`docs/PLANO.md`](docs/PLANO.md).
 
-**Fase atual: 1** — setup, PWA instalável, login com senha + digital (passkey) e bloqueio do app, conexão com a Pluggy,
-sincronização completa + webhooks, lista de transações, detecção de transferências entre contas próprias, pagamento de
-fatura, aplicações/resgates, estornos, parcelas e caixa × competência.
+**Fases entregues:**
+
+- **1** — setup, PWA instalável, login com senha + digital (passkey) e bloqueio do app, conexão com a Pluggy,
+  sincronização completa + webhooks, lista de transações, detecção de transferências entre contas próprias, pagamento de
+  fatura, aplicações/resgates, estornos, parcelas e caixa × competência.
+- **2** — categorias e regras, categorização do histórico com Claude Haiku (regras → cache por estabelecimento → IA,
+  carga histórica via Message Batches) e fila de revisão; divisão de transações e tags; análise de fixas × variáveis ×
+  eventuais; painel com meta de poupança e gastos por categoria; orçamentos com ritmo e sobra; cartões com parcelas futuras,
+  melhor dia de compra e comprometimento da renda.
 
 ## Stack
 
@@ -75,6 +81,9 @@ o do Playwright, aponte `PW_CHROMIUM_PATH`.
 | `JOBS_MODE`                                 | não                    | `inngest` (padrão) ou `inline` (executa na hora; dev/testes).                                                         |
 | `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` | em produção            | Preenchidas pela integração Inngest na Vercel.                                                                        |
 | `CRON_SECRET`                               | em produção            | Protege `/api/cron/fallback` (a Vercel envia `Authorization: Bearer`).                                                |
+| `ANTHROPIC_API_KEY`                         | recomendado            | Chave da Anthropic, só no backend. Sem ela, a categorização usa apenas regras e o histórico de estabelecimentos.      |
+| `AI_MODEL`                                  | não                    | Padrão `claude-haiku-5-5`.                                                                                            |
+| `AI_FAKE`                                   | não                    | `true` = IA falsa e determinística (dev/E2E, sem custo).                                                              |
 
 ## Deploy na Vercel (plano Hobby)
 
@@ -139,6 +148,27 @@ do mesmo item, então o histórico e as suas edições são preservados.
 A Pluggy atualiza cada item automaticamente até 4×/dia e avisa por webhook. Transações com mais de 6 dias são
 reatualizadas só 1×/semana, faturas e lista de investimentos 1×/dia. O botão **Sincronizar** relê o que a Pluggy já tem
 (grátis); **Atualizar no banco** pede uma coleta nova e gasta cota mensal — por isso é limitado a 1×/hora por instituição.
+
+## Categorização com IA (Claude Haiku)
+
+Pipeline em camadas, para gastar o mínimo:
+
+1. **Estorno** herda a categoria da compra original.
+2. **Regras** do usuário ("se a descrição contém UBER → Transporte"), por prioridade. Regras também podem mudar o tipo
+   (ex.: "PIX PARA MÃE" → transferência).
+3. **Cache por estabelecimento** (descrição normalizada): o mesmo comerciante nunca vai duas vezes à IA.
+4. **Claude Haiku** só para o que sobrar, em blocos de 40 estabelecimentos, com saída JSON validada por Zod e categorias
+   sempre da sua lista. A carga histórica (≥ 50 estabelecimentos) vai pela **Message Batches API** (50% mais barata);
+   o resto, na hora.
+
+- Abaixo do limiar de confiança (padrão 70%), a transação vai para **Revisão**. Cada correção vale para o estabelecimento
+  inteiro, vira exemplo para as próximas classificações e, opcionalmente, uma regra.
+- Privacidade: só vão para a API descrições normalizadas de estabelecimentos (sem CPF/CNPJ, e-mails, telefones, contas ou
+  números longos) e o valor típico arredondado.
+- Custo: cada chamada registra tokens e custo (`ai_usage_log`); há um **teto mensal** configurável em Configurações →
+  Preferências, com aviso aos 80%. Para ~5 mil transações/ano o custo esperado é de centavos de dólar.
+- Eval: `pnpm tsx scripts/eval-categorization.ts` mede a acurácia num conjunto fixo de 45 estabelecimentos
+  (`tests/evals/categorization.json`; meta ≥ 90%). Custa poucos centavos; use `--fake` para testar o harness.
 
 ## Segurança
 

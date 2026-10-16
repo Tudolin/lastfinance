@@ -7,6 +7,9 @@ export const itemSyncData = z.object({
   trigger: z.enum(['webhook', 'cron', 'manual', 'backfill', 'connect']),
 });
 
+export const aiBatchData = z.object({ jobId: z.string().uuid() });
+
 export type JobEvent =
   | { name: 'pluggy/webhook.received'; data: z.infer<typeof webhookReceivedData> }
-  | { name: 'pluggy/item.sync'; data: z.infer<typeof itemSyncData> };
+  | { name: 'pluggy/item.sync'; data: z.infer<typeof itemSyncData> }
+  | { name: 'ai/batch.submitted'; data: z.infer<typeof aiBatchData> };

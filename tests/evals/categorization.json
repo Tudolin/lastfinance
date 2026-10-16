@@ -1,0 +1,317 @@
+[
+  {
+    "description": "IFOOD CLUB",
+    "direction": "out",
+    "typicalAmount": 58,
+    "channel": "cartao",
+    "expected": "delivery"
+  },
+  {
+    "description": "RAPPI BRASIL",
+    "direction": "out",
+    "typicalAmount": 72,
+    "channel": "cartao",
+    "expected": "delivery"
+  },
+  {
+    "description": "UBER TRIP",
+    "direction": "out",
+    "typicalAmount": 23,
+    "channel": "cartao",
+    "expected": "apps-transporte"
+  },
+  {
+    "description": "99 POP",
+    "direction": "out",
+    "typicalAmount": 18,
+    "channel": "cartao",
+    "expected": "apps-transporte"
+  },
+  {
+    "description": "CARREFOUR HIPER",
+    "direction": "out",
+    "typicalAmount": 410,
+    "channel": "cartao",
+    "expected": "mercado"
+  },
+  {
+    "description": "ASSAI ATACADISTA",
+    "direction": "out",
+    "typicalAmount": 380,
+    "channel": "conta",
+    "expected": "mercado"
+  },
+  {
+    "description": "PAO DE ACUCAR",
+    "direction": "out",
+    "typicalAmount": 160,
+    "channel": "cartao",
+    "expected": "mercado"
+  },
+  {
+    "description": "NETFLIX COM",
+    "direction": "out",
+    "typicalAmount": 56,
+    "channel": "cartao",
+    "expected": "assinaturas"
+  },
+  {
+    "description": "SPOTIFY",
+    "direction": "out",
+    "typicalAmount": 22,
+    "channel": "cartao",
+    "expected": "assinaturas"
+  },
+  {
+    "description": "POSTO IPIRANGA",
+    "direction": "out",
+    "typicalAmount": 230,
+    "channel": "cartao",
+    "expected": "combustivel"
+  },
+  {
+    "description": "SHELL BOX",
+    "direction": "out",
+    "typicalAmount": 200,
+    "channel": "cartao",
+    "expected": "combustivel"
+  },
+  {
+    "description": "DROGASIL",
+    "direction": "out",
+    "typicalAmount": 64,
+    "channel": "cartao",
+    "expected": "farmacia"
+  },
+  {
+    "description": "DROGARIA SAO PAULO",
+    "direction": "out",
+    "typicalAmount": 47,
+    "channel": "cartao",
+    "expected": "farmacia"
+  },
+  {
+    "description": "SMARTFIT",
+    "direction": "out",
+    "typicalAmount": 120,
+    "channel": "cartao",
+    "expected": "academia"
+  },
+  {
+    "description": "UNIMED",
+    "direction": "out",
+    "typicalAmount": 690,
+    "channel": "conta",
+    "expected": "plano-saude"
+  },
+  {
+    "description": "DEB AUT VIVO FIBRA",
+    "direction": "out",
+    "typicalAmount": 130,
+    "channel": "conta",
+    "expected": "internet-telefone"
+  },
+  {
+    "description": "ENEL DISTRIBUICAO SP",
+    "direction": "out",
+    "typicalAmount": 210,
+    "channel": "conta",
+    "expected": "contas-casa"
+  },
+  {
+    "description": "SABESP",
+    "direction": "out",
+    "typicalAmount": 95,
+    "channel": "conta",
+    "expected": "contas-casa"
+  },
+  {
+    "description": "COMGAS",
+    "direction": "out",
+    "typicalAmount": 60,
+    "channel": "conta",
+    "expected": "contas-casa"
+  },
+  {
+    "description": "PIX ENVIADO IMOBILIARIA BOA VISTA",
+    "direction": "out",
+    "typicalAmount": 2100,
+    "channel": "conta",
+    "expected": "aluguel"
+  },
+  {
+    "description": "CONDOMINIO EDIFICIO SOLAR",
+    "direction": "out",
+    "typicalAmount": 750,
+    "channel": "conta",
+    "expected": "condominio"
+  },
+  {
+    "description": "OUTBACK STEAKHOUSE",
+    "direction": "out",
+    "typicalAmount": 240,
+    "channel": "cartao",
+    "expected": "restaurantes"
+  },
+  {
+    "description": "BAR DO ZE",
+    "direction": "out",
+    "typicalAmount": 85,
+    "channel": "cartao",
+    "expected": "restaurantes"
+  },
+  {
+    "description": "PADARIA SAO JORGE",
+    "direction": "out",
+    "typicalAmount": 25,
+    "channel": "conta",
+    "expected": "padaria-cafe"
+  },
+  {
+    "description": "STARBUCKS",
+    "direction": "out",
+    "typicalAmount": 32,
+    "channel": "cartao",
+    "expected": "padaria-cafe"
+  },
+  {
+    "description": "SEM PARAR",
+    "direction": "out",
+    "typicalAmount": 70,
+    "channel": "cartao",
+    "expected": "estacionamento-pedagio"
+  },
+  {
+    "description": "ESTAPAR",
+    "direction": "out",
+    "typicalAmount": 25,
+    "channel": "cartao",
+    "expected": "estacionamento-pedagio"
+  },
+  {
+    "description": "METRO SP RECARGA",
+    "direction": "out",
+    "typicalAmount": 50,
+    "channel": "cartao",
+    "expected": "transporte-publico"
+  },
+  {
+    "description": "LATAM AIRLINES",
+    "direction": "out",
+    "typicalAmount": 1300,
+    "channel": "cartao",
+    "expected": "viagens"
+  },
+  {
+    "description": "BOOKING COM",
+    "direction": "out",
+    "typicalAmount": 900,
+    "channel": "cartao",
+    "expected": "viagens"
+  },
+  {
+    "description": "INGRESSO COM",
+    "direction": "out",
+    "typicalAmount": 120,
+    "channel": "cartao",
+    "expected": "eventos"
+  },
+  {
+    "description": "STEAM PURCHASE",
+    "direction": "out",
+    "typicalAmount": 60,
+    "channel": "cartao",
+    "expected": "jogos"
+  },
+  {
+    "description": "RENNER",
+    "direction": "out",
+    "typicalAmount": 230,
+    "channel": "cartao",
+    "expected": "roupas"
+  },
+  {
+    "description": "KABUM",
+    "direction": "out",
+    "typicalAmount": 1800,
+    "channel": "cartao",
+    "expected": "eletronicos"
+  },
+  {
+    "description": "TOK STOK",
+    "direction": "out",
+    "typicalAmount": 600,
+    "channel": "cartao",
+    "expected": "casa-decoracao"
+  },
+  {
+    "description": "PETZ",
+    "direction": "out",
+    "typicalAmount": 180,
+    "channel": "cartao",
+    "expected": "pets"
+  },
+  {
+    "description": "ALURA CURSOS",
+    "direction": "out",
+    "typicalAmount": 90,
+    "channel": "cartao",
+    "expected": "cursos"
+  },
+  {
+    "description": "AMAZON KINDLE",
+    "direction": "out",
+    "typicalAmount": 35,
+    "channel": "cartao",
+    "expected": "livros"
+  },
+  {
+    "description": "IOF COMPRA INTERNACIONAL",
+    "direction": "out",
+    "typicalAmount": 12,
+    "channel": "cartao",
+    "expected": "juros-iof"
+  },
+  {
+    "description": "TARIFA PACOTE SERVICOS",
+    "direction": "out",
+    "typicalAmount": 39,
+    "channel": "conta",
+    "expected": "tarifas"
+  },
+  {
+    "description": "DAS SIMPLES NACIONAL",
+    "direction": "out",
+    "typicalAmount": 380,
+    "channel": "conta",
+    "expected": "impostos"
+  },
+  {
+    "description": "SALARIO ACME LTDA",
+    "direction": "in",
+    "typicalAmount": 6127,
+    "channel": "conta",
+    "expected": "salario"
+  },
+  {
+    "description": "PIX RECEBIDO CLIENTE FREELA NF",
+    "direction": "in",
+    "typicalAmount": 3500,
+    "channel": "conta",
+    "expected": "freela"
+  },
+  {
+    "description": "REND PAGO APLIC AUT",
+    "direction": "in",
+    "typicalAmount": 12,
+    "channel": "conta",
+    "expected": "rendimentos"
+  },
+  {
+    "description": "REEMBOLSO DESPESAS EMPRESA",
+    "direction": "in",
+    "typicalAmount": 240,
+    "channel": "conta",
+    "expected": "reembolsos"
+  }
+]

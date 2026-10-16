@@ -1,4 +1,4 @@
-import { Landmark, LineChart } from 'lucide-react';
+import { CircleAlert, Landmark, LineChart, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { Money } from '@/components/money';
 import { PageHeader } from '@/components/shell/page-header';
@@ -9,6 +9,9 @@ import { Card, CardTitle } from '@/components/ui/card';
 import { addMonths, clampedDate, parts, startOfMonth, todaySP } from '@/domain/dates/local-date';
 import { monthTitle, shortDate, weekdayDate } from '@/lib/format';
 import { getBalances, getConnections, getOpenBills } from '@/server/queries/accounts';
+import { requireUnlocked } from '@/server/auth/request';
+import { categoryBreakdown, countPendingReview, getCategories } from '@/server/queries/categories';
+import { getBudgets } from '@/server/queries/planning';
 import { listTransactions, summarize } from '@/server/queries/transactions';
 
 export const metadata = { title: 'Painel' };
@@ -46,13 +49,43 @@ export default async function DashboardPage({
   const prevStart = addMonths(monthStart, -1);
   const prevSameDay = clampedDate(parts(prevStart).year, parts(prevStart).month, day);
 
-  const [balances, bills, current, previous, recent] = await Promise.all([
+  const [
+    balances,
+    bills,
+    current,
+    previous,
+    recent,
+    session,
+    breakdown,
+    categories,
+    reviewCount,
+    budgets,
+  ] = await Promise.all([
     getBalances(),
     getOpenBills(today),
     summarize(monthStart, today, basis),
     summarize(prevStart, prevSameDay, basis),
     listTransactions({ basis: 'cash', page: 1 }),
+    requireUnlocked(),
+    categoryBreakdown(monthStart, today, basis),
+    getCategories(),
+    countPendingReview(),
+    getBudgets(today),
   ]);
+  const goal = session.settings.savingsGoalPct;
+  // agrega por categoria-mãe para o resumo
+  const byRoot = new Map<string | null, number>();
+  for (const b of breakdown) {
+    const c = categories.find((x) => x.id === b.categoryId);
+    const root = c?.parentId ?? c?.id ?? null;
+    byRoot.set(root, (byRoot.get(root) ?? 0) + b.cents);
+  }
+  const topCategories = [...byRoot.entries()]
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+  const maxCat = Math.max(1, ...topCategories.map(([, v]) => v));
+  const budgetAlerts = budgets.filter((b) => b.pace.status !== 'ok');
   const surplus = current.incomeCents - current.expenseCents;
   const savingsRate =
     current.incomeCents > 0 ? Math.round((surplus / current.incomeCents) * 100) : null;
@@ -137,10 +170,90 @@ export default async function DashboardPage({
           <span className="text-[13px] font-semibold text-ink-2">Taxa de poupança</span>
           <span className="text-lg font-extrabold lg:text-[22px]">
             {savingsRate !== null ? `${savingsRate}%` : '—'}
+            <span className="text-[13px] font-semibold text-ink-2"> · meta {goal}%</span>
           </span>
-          <span className="text-xs text-ink-2">meta configurável na Fase 2</span>
+          <div className="h-2 rounded bg-track" aria-hidden="true">
+            <div
+              className={`h-2 rounded ${savingsRate !== null && savingsRate >= goal ? 'bg-[#0b6e55]' : 'bg-warn'}`}
+              style={{
+                width: `${Math.max(0, Math.min(100, Math.round(((savingsRate ?? 0) / Math.max(goal, 1)) * 100)))}%`,
+              }}
+            />
+          </div>
         </Card>
       </section>
+
+      {reviewCount > 0 || budgetAlerts.length > 0 ? (
+        <section aria-label="Avisos" className="flex flex-col gap-2">
+          {reviewCount > 0 ? (
+            <Link
+              href="/revisao"
+              className="flex items-center gap-3 rounded-[18px] border border-dashed border-ink-3 bg-surface p-4 text-ink no-underline"
+            >
+              <CircleAlert className="size-5 shrink-0 text-ink-2" aria-hidden="true" />
+              <span className="flex-1 text-sm font-semibold text-ink-2">
+                {reviewCount} {reviewCount === 1 ? 'transação aguardando' : 'transações aguardando'}{' '}
+                sua confirmação de categoria
+              </span>
+              <span className="text-sm font-extrabold text-link">Revisar</span>
+            </Link>
+          ) : null}
+          {budgetAlerts.slice(0, 3).map((b) => (
+            <Link
+              key={b.id}
+              href="/orcamentos"
+              className="flex items-center gap-3 rounded-[18px] border border-warn-border bg-warn-soft p-4 text-warn-ink no-underline"
+            >
+              <TriangleAlert className="size-5 shrink-0" aria-hidden="true" />
+              <span className="flex-1 text-sm font-semibold">
+                {b.label}: {Math.round(b.pace.usedRatio * 100)}% do orçamento
+                {b.pace.status === 'exceeded'
+                  ? ' — estourou'
+                  : b.pace.projectedCents > b.pace.limitCents
+                    ? ' — no ritmo atual, vai estourar'
+                    : ''}
+              </span>
+            </Link>
+          ))}
+        </section>
+      ) : null}
+
+      {topCategories.length ? (
+        <Card className="flex flex-col gap-3">
+          <div className="flex items-center">
+            <CardTitle className="mr-auto">Para onde foi o dinheiro</CardTitle>
+            <Link href="/categorias" className="text-[13px] font-bold">
+              Categorias
+            </Link>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {topCategories.map(([id, cents]) => {
+              const c = categories.find((x) => x.id === id);
+              return (
+                <Link
+                  key={id ?? 'none'}
+                  href={id ? `/transacoes?category=${id}` : '/revisao'}
+                  className="flex items-center gap-3 text-sm text-ink no-underline"
+                >
+                  <span className="w-36 shrink-0 truncate font-semibold sm:w-44">
+                    {c?.name ?? 'Sem categoria'}
+                  </span>
+                  <div className="h-3 flex-1 rounded bg-track" aria-hidden="true">
+                    <div
+                      className="h-3 rounded"
+                      style={{
+                        width: `${Math.round((cents / maxCat) * 100)}%`,
+                        background: c?.color ?? '#94a3b8',
+                      }}
+                    />
+                  </div>
+                  <Money cents={cents} className="w-24 text-right font-bold" />
+                </Link>
+              );
+            })}
+          </div>
+        </Card>
+      ) : null}
 
       <section
         aria-label="Faturas e últimas transações"

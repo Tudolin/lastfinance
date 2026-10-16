@@ -198,12 +198,18 @@ export const ownDocument = pgTable('own_document', {
   createdAt: ts('created_at').notNull().defaultNow(),
 });
 
+export const categoryKind = pgEnum('category_kind', ['expense', 'income']);
+
 export const category = pgTable('category', {
   id: id(),
+  /** Identificador estável das categorias padrão (usado pela IA como enum). Nulo nas criadas pelo usuário. */
+  slug: text('slug').unique(),
   parentId: uuid('parent_id'),
+  kind: categoryKind('kind').notNull().default('expense'),
   name: text('name').notNull(),
   icon: text('icon'),
   color: text('color'),
+  sortOrder: integer('sort_order').notNull().default(0),
   pluggyCategoryId: text('pluggy_category_id').unique(),
   isSystem: boolean('is_system').notNull().default(false),
   archivedAt: ts('archived_at'),
@@ -243,6 +249,8 @@ export const creditCardBill = pgTable(
   },
   (t) => [index('bill_account_due_idx').on(t.accountId, t.dueDate)],
 );
+
+export const categorySource = pgEnum('category_source', ['user', 'rule', 'merchant', 'ai', 'link']);
 
 export const txKind = pgEnum('tx_kind', [
   'expense',
@@ -300,6 +308,9 @@ export const transaction = pgTable(
     refundOfTransactionId: uuid('refund_of_transaction_id'),
 
     categoryId: uuid('category_id').references(() => category.id, { onDelete: 'set null' }),
+    categorySource: categorySource('category_source'),
+    categoryConfidence: real('category_confidence'),
+    ruleId: uuid('rule_id'),
     notes: text('notes'),
     tags: text('tags')
       .array()
@@ -420,3 +431,138 @@ export const syncLog = pgTable(
   },
   (t) => [index('sync_log_started_idx').on(t.startedAt)],
 );
+
+// ───────────────────────── Fase 2: categorização, orçamentos, IA ─────────────────────────
+
+export const transactionSplit = pgTable(
+  'transaction_split',
+  {
+    id: id(),
+    transactionId: uuid('transaction_id')
+      .notNull()
+      .references(() => transaction.id, { onDelete: 'cascade' }),
+    categoryId: uuid('category_id').references(() => category.id, { onDelete: 'set null' }),
+    /** Mesmo sinal da transação; a soma das partes é igual ao valor da transação. */
+    amountCents: cents('amount_cents').notNull(),
+    note: text('note'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('split_tx_idx').on(t.transactionId)],
+);
+
+export const ruleOrigin = pgEnum('rule_origin', ['user', 'correction']);
+
+export const categorizationRule = pgTable('categorization_rule', {
+  id: id(),
+  name: text('name').notNull(),
+  priority: integer('priority').notNull().default(100),
+  enabled: boolean('enabled').notNull().default(true),
+  conditions: jsonb('conditions').$type<Record<string, unknown>>().notNull(),
+  actions: jsonb('actions').$type<Record<string, unknown>>().notNull(),
+  origin: ruleOrigin('origin').notNull().default('user'),
+  hits: integer('hits').notNull().default(0),
+  lastHitAt: ts('last_hit_at'),
+  ...timestamps,
+});
+
+export const merchantSource = pgEnum('merchant_source', ['ai', 'user']);
+
+/** Cache de categorização por estabelecimento (descrição normalizada): o mesmo comerciante não vai duas vezes à IA. */
+export const merchant = pgTable('merchant', {
+  id: id(),
+  descriptionNorm: text('description_norm').notNull().unique(),
+  displayName: text('display_name'),
+  categoryId: uuid('category_id').references(() => category.id, { onDelete: 'set null' }),
+  nature: text('nature'),
+  looksRecurring: boolean('looks_recurring'),
+  periodicity: text('periodicity'),
+  confidence: real('confidence'),
+  source: merchantSource('source').notNull(),
+  model: text('model'),
+  ...timestamps,
+});
+
+export const reviewStatus = pgEnum('review_status', ['pending', 'resolved', 'dismissed']);
+
+export const reviewQueue = pgTable(
+  'review_queue',
+  {
+    id: id(),
+    transactionId: uuid('transaction_id')
+      .notNull()
+      .references(() => transaction.id, { onDelete: 'cascade' }),
+    reason: text('reason').notNull(),
+    suggested: jsonb('suggested').$type<Record<string, unknown>>().notNull().default({}),
+    status: reviewStatus('status').notNull().default('pending'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    resolvedAt: ts('resolved_at'),
+  },
+  (t) => [
+    uniqueIndex('review_pending_uq')
+      .on(t.transactionId)
+      .where(sql`${t.status} = 'pending'`),
+  ],
+);
+
+export const categorySuggestion = pgTable('category_suggestion', {
+  id: id(),
+  name: text('name').notNull().unique(),
+  parentName: text('parent_name'),
+  examples: text('examples')
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
+  status: reviewStatus('status').notNull().default('pending'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const budget = pgTable(
+  'budget',
+  {
+    id: id(),
+    categoryId: uuid('category_id')
+      .notNull()
+      .references(() => category.id, { onDelete: 'cascade' }),
+    /** primeiro dia do mês */
+    month: day('month').notNull(),
+    amountCents: cents('amount_cents').notNull(),
+    rollover: boolean('rollover').notNull().default(false),
+    rolledInCents: cents('rolled_in_cents').notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex('budget_cat_month_uq').on(t.categoryId, t.month)],
+);
+
+export const aiUsageLog = pgTable(
+  'ai_usage_log',
+  {
+    id: id(),
+    feature: text('feature').notNull(),
+    model: text('model').notNull(),
+    inputTokens: integer('input_tokens').notNull().default(0),
+    outputTokens: integer('output_tokens').notNull().default(0),
+    cacheReadTokens: integer('cache_read_tokens').notNull().default(0),
+    cacheWriteTokens: integer('cache_write_tokens').notNull().default(0),
+    batch: boolean('batch').notNull().default(false),
+    /** custo em milionésimos de dólar */
+    costMicrosUsd: bigint('cost_micros_usd', { mode: 'number' }).notNull().default(0),
+    latencyMs: integer('latency_ms'),
+    at: ts('at').notNull().defaultNow(),
+  },
+  (t) => [index('ai_usage_at_idx').on(t.at)],
+);
+
+export const aiBatchStatus = pgEnum('ai_batch_status', ['submitted', 'ended', 'applied', 'failed']);
+
+export const aiBatchJob = pgTable('ai_batch_job', {
+  id: id(),
+  anthropicBatchId: text('anthropic_batch_id').notNull().unique(),
+  feature: text('feature').notNull(),
+  status: aiBatchStatus('status').notNull().default('submitted'),
+  itemCount: integer('item_count').notNull(),
+  /** id do item no lote → descrição normalizada do estabelecimento (sem dados pessoais) */
+  mapping: jsonb('mapping').$type<Record<string, string>>().notNull().default({}),
+  submittedAt: ts('submitted_at').notNull().defaultNow(),
+  endedAt: ts('ended_at'),
+  error: text('error'),
+});

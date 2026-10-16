@@ -16,6 +16,8 @@ export type TxRowData = {
   installmentNumber: number | null;
   installmentTotal: number | null;
   status: string;
+  categoryLabel?: string | null;
+  categorySource?: string | null;
 };
 
 const NEUTRAL_NOTE: Partial<Record<TxKind, string>> = {
@@ -42,6 +44,7 @@ export function TransactionRow({ t }: { t: TxRowData }) {
           ) : null}
           <KindBadge kind={t.kind} className="px-1.5 py-0.5" />
           <span>
+            {t.categoryLabel ? `${t.categoryLabel} · ` : ''}
             {t.institution} · {t.accountName}
             {NEUTRAL_NOTE[t.kind] ? ` · ${NEUTRAL_NOTE[t.kind]}` : ''}
             {t.status === 'PENDING' ? ' · pendente' : ''}

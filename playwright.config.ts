@@ -15,6 +15,7 @@ export const E2E_ENV = {
   PLUGGY_FAKE: 'true',
   PLUGGY_WEBHOOK_SECRET: 'e2e-webhook-secret-0123456789abcdef',
   JOBS_MODE: 'inline',
+  AI_FAKE: 'true',
   CRON_SECRET: 'e2e-cron-secret-123456',
 };
 

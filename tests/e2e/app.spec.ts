@@ -106,7 +106,7 @@ test('conectar instituições, sincronizar e classificar', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Editar' })).toBeVisible();
   await ready(page);
   await page.getByLabel('Tipo').selectOption('adjustment');
-  await page.getByRole('button', { name: 'Salvar' }).click();
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click();
   await expect(page.getByText('Salvo.')).toBeVisible();
   await page.reload();
   await expect(page.getByText('definido por você')).toBeVisible();

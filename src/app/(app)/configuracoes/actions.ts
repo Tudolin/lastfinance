@@ -182,3 +182,32 @@ export async function revokeOtherSessionsAction(): Promise<ActionResult> {
   revalidatePath('/configuracoes/sessoes');
   return { ok: true };
 }
+
+// ───── Preferências (metas e IA) ─────
+
+const prefsSchema = z.object({
+  savingsGoalPct: z.coerce.number().min(0).max(100),
+  aiMonthlyBudgetUsd: z.coerce.number().min(0).max(1000),
+  aiReviewThresholdPct: z.coerce.number().min(0).max(100),
+});
+
+export async function updatePreferencesAction(
+  _: ActionResult | undefined,
+  fd: FormData,
+): Promise<ActionResult> {
+  const s = await requireUnlocked();
+  const parsed = prefsSchema.safeParse(Object.fromEntries(fd));
+  if (!parsed.success) return { ok: false, error: 'Valores inválidos.' };
+  const db = getDb();
+  const [user] = await db.select().from(schema.appUser).where(eq(schema.appUser.id, s.user.id));
+  const settings = {
+    ...parseSettings(user?.settings),
+    savingsGoalPct: parsed.data.savingsGoalPct,
+    aiMonthlyBudgetUsd: parsed.data.aiMonthlyBudgetUsd,
+    aiReviewThreshold: parsed.data.aiReviewThresholdPct / 100,
+  };
+  await db.update(schema.appUser).set({ settings }).where(eq(schema.appUser.id, s.user.id));
+  revalidatePath('/configuracoes/preferencias');
+  revalidatePath('/');
+  return { ok: true };
+}

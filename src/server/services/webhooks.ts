@@ -7,6 +7,7 @@ import { dispatch } from '@/server/jobs/dispatch';
 import type { JobStep } from '@/server/jobs/step';
 import { log } from '@/server/log';
 import { mapTransaction } from './pluggy-mapping';
+import { categorizePending } from './categorize';
 import { postprocess } from './postprocess';
 import {
   markConnectionDeleted,
@@ -192,6 +193,9 @@ export async function processWebhookEvent(step: JobStep, webhookEventId: string)
           page++;
         } while (after && page < 50);
         await step.run('postprocess', () => postprocess());
+        await step.run('categorize', () =>
+          categorizePending({ mode: 'sync', maxAiMerchants: 100 }),
+        );
         break;
       }
       case 'transactions/updated': {
@@ -212,12 +216,18 @@ export async function processWebhookEvent(step: JobStep, webhookEventId: string)
           });
         }
         await step.run('postprocess', () => postprocess());
+        await step.run('categorize', () =>
+          categorizePending({ mode: 'sync', maxAiMerchants: 100 }),
+        );
         break;
       }
       case 'transactions/deleted': {
         const d = txChanged.parse(p);
         await step.run('soft-delete', () => softDeleteByPluggyIds(d.transactionIds));
         await step.run('postprocess', () => postprocess());
+        await step.run('categorize', () =>
+          categorizePending({ mode: 'sync', maxAiMerchants: 100 }),
+        );
         break;
       }
       default:

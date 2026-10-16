@@ -29,6 +29,12 @@ const schema = z.object({
   PLUGGY_WEBHOOK_IP_ALLOWLIST: z.string().optional(),
   PLUGGY_FAKE: bool,
 
+  ANTHROPIC_API_KEY: z.string().optional(),
+  /** Modelo padrão da camada de IA. */
+  AI_MODEL: z.string().default('claude-haiku-5-5'),
+  /** true = IA falsa e determinística (dev/testes, sem custo). */
+  AI_FAKE: bool,
+
   JOBS_MODE: z.enum(['inngest', 'inline']).default('inngest'),
   CRON_SECRET: z.string().min(16).optional(),
 });
