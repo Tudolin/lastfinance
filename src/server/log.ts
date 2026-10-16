@@ -49,6 +49,6 @@ export const log = {
   error: (msg: string, err: unknown, f?: Fields) =>
     write('error', msg, {
       ...f,
-      code: (err as { code?: string; name?: string })?.code ?? (err as Error)?.name,
+      code: f?.code ?? (err as { code?: string; name?: string })?.code ?? (err as Error)?.name,
     }),
 };

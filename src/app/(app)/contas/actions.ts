@@ -8,7 +8,7 @@ import { audit } from '@/server/audit';
 import { getPluggy } from '@/server/adapters/pluggy/client';
 import { requireUnlocked } from '@/server/auth/request';
 import { getDb, schema } from '@/server/db/client';
-import { DISPATCH_HELP, DispatchError, dispatch } from '@/server/jobs/dispatch';
+import { DispatchError, dispatch } from '@/server/jobs/dispatch';
 import { refreshConnection } from '@/server/services/sync';
 
 type Result = { ok: true; token?: string } | { ok: false; error: string; needStepUp?: boolean };
@@ -57,7 +57,7 @@ export async function registerItemAction(rawItemId: string): Promise<Result> {
     });
   } catch (err) {
     if (err instanceof DispatchError)
-      return { ok: false, error: `A instituição foi salva. ${DISPATCH_HELP}` };
+      return { ok: false, error: `A instituição foi salva. ${err.help}` };
     throw err;
   }
   return { ok: true };
@@ -77,7 +77,7 @@ export async function syncNowAction(pluggyItemId: string): Promise<Result> {
       data: { pluggyItemId, mode: 'incremental', trigger: 'manual' },
     });
   } catch (err) {
-    if (err instanceof DispatchError) return { ok: false, error: DISPATCH_HELP };
+    if (err instanceof DispatchError) return { ok: false, error: err.help };
     throw err;
   }
   revalidatePath('/contas');
