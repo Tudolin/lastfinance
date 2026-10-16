@@ -24,4 +24,15 @@ describe('checkEnv', () => {
     expect(problems.join(' ')).not.toContain('curta-demais-segredo');
     expect(problems.join(' ')).not.toContain('u:p@host');
   });
+
+  it('em produção na Vercel, exige as chaves do Inngest (a não ser com JOBS_MODE=inline)', () => {
+    const prod = { ...ok, VERCEL_ENV: 'production' };
+    expect(checkEnv(prod)).toEqual([
+      expect.stringMatching(/^INNGEST_EVENT_KEY: não definida — conecte a integração Inngest/),
+      expect.stringMatching(/^INNGEST_SIGNING_KEY: não definida/),
+    ]);
+    expect(checkEnv({ ...prod, INNGEST_EVENT_KEY: 'k', INNGEST_SIGNING_KEY: 's' })).toEqual([]);
+    expect(checkEnv({ ...prod, JOBS_MODE: 'inline' })).toEqual([]);
+    expect(checkEnv({ ...ok, VERCEL_ENV: 'preview' })).toEqual([]);
+  });
 });
