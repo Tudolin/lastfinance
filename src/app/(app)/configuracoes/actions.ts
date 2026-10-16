@@ -189,6 +189,8 @@ const prefsSchema = z.object({
   savingsGoalPct: z.coerce.number().min(0).max(100),
   aiMonthlyBudgetUsd: z.coerce.number().min(0).max(1000),
   aiReviewThresholdPct: z.coerce.number().min(0).max(100),
+  reserveMin: z.coerce.number().min(0).max(1_000_000),
+  forecastVariableMode: z.enum(['avg3', 'avg6', 'budget']),
 });
 
 export async function updatePreferencesAction(
@@ -205,9 +207,11 @@ export async function updatePreferencesAction(
     savingsGoalPct: parsed.data.savingsGoalPct,
     aiMonthlyBudgetUsd: parsed.data.aiMonthlyBudgetUsd,
     aiReviewThreshold: parsed.data.aiReviewThresholdPct / 100,
+    reserveMinCents: Math.round(parsed.data.reserveMin * 100),
+    forecastVariableMode: parsed.data.forecastVariableMode,
   };
   await db.update(schema.appUser).set({ settings }).where(eq(schema.appUser.id, s.user.id));
-  revalidatePath('/configuracoes/preferencias');
-  revalidatePath('/');
+  for (const p of ['/configuracoes/preferencias', '/', '/previsao', '/posso-gastar'])
+    revalidatePath(p);
   return { ok: true };
 }

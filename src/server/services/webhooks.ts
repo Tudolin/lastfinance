@@ -8,6 +8,7 @@ import type { JobStep } from '@/server/jobs/step';
 import { log } from '@/server/log';
 import { mapTransaction } from './pluggy-mapping';
 import { categorizePending } from './categorize';
+import { refreshPlanning } from './planning';
 import { postprocess } from './postprocess';
 import {
   markConnectionDeleted,
@@ -196,6 +197,7 @@ export async function processWebhookEvent(step: JobStep, webhookEventId: string)
         await step.run('categorize', () =>
           categorizePending({ mode: 'sync', maxAiMerchants: 100 }),
         );
+        await step.run('planning', () => refreshPlanning());
         break;
       }
       case 'transactions/updated': {
@@ -219,6 +221,7 @@ export async function processWebhookEvent(step: JobStep, webhookEventId: string)
         await step.run('categorize', () =>
           categorizePending({ mode: 'sync', maxAiMerchants: 100 }),
         );
+        await step.run('planning', () => refreshPlanning());
         break;
       }
       case 'transactions/deleted': {
@@ -228,6 +231,7 @@ export async function processWebhookEvent(step: JobStep, webhookEventId: string)
         await step.run('categorize', () =>
           categorizePending({ mode: 'sync', maxAiMerchants: 100 }),
         );
+        await step.run('planning', () => refreshPlanning());
         break;
       }
       default:

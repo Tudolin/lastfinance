@@ -53,11 +53,13 @@ export default async function PreferencesPage() {
         </div>
       </Card>
       <Card className="flex flex-col gap-3">
-        <CardTitle>Metas e limites</CardTitle>
+        <CardTitle>Metas, limites e previsão</CardTitle>
         <PreferencesForm
           savingsGoalPct={s.settings.savingsGoalPct}
           aiMonthlyBudgetUsd={s.settings.aiMonthlyBudgetUsd}
           aiReviewThreshold={s.settings.aiReviewThreshold}
+          reserveMinCents={s.settings.reserveMinCents}
+          forecastVariableMode={s.settings.forecastVariableMode}
         />
       </Card>
     </div>

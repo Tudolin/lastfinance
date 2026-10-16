@@ -1,12 +1,8 @@
 import 'server-only';
-import { and, between, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, between, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import { analyzeGroup, monthRange, type GroupStats, type Nature } from '@/domain/analysis/nature';
 import { budgetPace, rolloverCents, type BudgetPace } from '@/domain/budgets/pace';
-import {
-  futureCommitment,
-  projectFutureInstallments,
-  type FutureInstallment,
-} from '@/domain/cards/installments';
+import { futureCommitment, type FutureInstallment } from '@/domain/cards/installments';
 import {
   addMonths,
   daysInMonth,
@@ -19,6 +15,7 @@ import {
 import { requireUnlocked } from '@/server/auth/request';
 import { getDb, schema } from '@/server/db/client';
 import { categoryLabel, listCategories } from '@/server/services/categories';
+import { loadFutureInstallments } from '@/server/services/planning';
 import { categoryBreakdown } from './categories';
 
 const {
@@ -137,7 +134,7 @@ export async function getCardsOverview() {
     };
   const cardIds = cards.map((c) => c.a.id);
 
-  const [bills, instRows] = await Promise.all([
+  const [bills, allFuture] = await Promise.all([
     db
       .select()
       .from(creditCardBill)
@@ -148,39 +145,9 @@ export async function getCardsOverview() {
         ),
       )
       .orderBy(creditCardBill.dueDate),
-    db
-      .select({
-        accountId: tx.accountId,
-        descriptionNorm: tx.descriptionNorm,
-        amountCents: tx.amountCents,
-        n: tx.installmentNumber,
-        total: tx.installmentTotal,
-        cashDate: tx.cashDate,
-        billDue: creditCardBill.dueDate,
-      })
-      .from(tx)
-      .leftJoin(creditCardBill, eq(tx.billId, creditCardBill.id))
-      .where(
-        and(
-          inArray(tx.accountId, cardIds),
-          isNull(tx.deletedAt),
-          isNotNull(tx.installmentNumber),
-          eq(tx.kind, 'expense'),
-        ),
-      ),
+    loadFutureInstallments(today),
   ]);
-  const dueDays = new Map(cards.filter((c) => c.a.dueDay).map((c) => [c.a.id, c.a.dueDay!]));
-  const future = projectFutureInstallments(
-    instRows.map((r) => ({
-      accountId: r.accountId,
-      baseDescription: r.descriptionNorm,
-      amountCents: r.amountCents,
-      installmentNumber: r.n!,
-      installmentTotal: r.total!,
-      dueDate: (r.billDue ?? r.cashDate) as LocalDate,
-    })),
-    dueDays,
-  ).filter((f) => f.dueDate > today);
+  const future = allFuture.filter((f) => cardIds.includes(f.accountId));
 
   // renda média dos 3 últimos meses completos (regime de caixa)
   const from = addMonths(startOfMonth(today), -3);

@@ -3,6 +3,7 @@ import { addDays, todaySP, type LocalDate } from '@/domain/dates/local-date';
 import type { JobStep } from '@/server/jobs/step';
 import { log } from '@/server/log';
 import { categorizePending } from './categorize';
+import { refreshPlanning } from './planning';
 import { postprocess } from './postprocess';
 import {
   finishSyncLog,
@@ -99,6 +100,7 @@ export async function runItemSync(step: JobStep, input: ItemSyncInput) {
     await step.run('categorize', () =>
       categorizePending({ mode: mode === 'backfill' ? 'batch' : 'sync', maxAiMerchants: 400 }),
     );
+    await step.run('planning', () => refreshPlanning(today));
     await step.run('log-finish', async () => {
       await markConnectionSynced(conn.id, mode === 'backfill');
       await finishSyncLog(logId, { status: 'success', counts });

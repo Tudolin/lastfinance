@@ -566,3 +566,218 @@ export const aiBatchJob = pgTable('ai_batch_job', {
   endedAt: ts('ended_at'),
   error: text('error'),
 });
+
+// ───────────────────────── Planejado (Fase 3) ─────────────────────────
+
+export const direction = pgEnum('direction', ['in', 'out']);
+
+/** Tabelas fiscais versionadas por vigência (INSS, IRRF, Lei 15.270, Simples…). */
+export const taxTable = pgTable(
+  'tax_table',
+  {
+    id: id(),
+    kind: text('kind').notNull(),
+    validFrom: day('valid_from').notNull(),
+    validTo: day('valid_to'),
+    payload: jsonb('payload').notNull(),
+    sourceUrl: text('source_url').notNull(),
+    verifiedAt: day('verified_at').notNull(),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex('tax_table_kind_from_uq').on(t.kind, t.validFrom)],
+);
+
+export const incomeType = pgEnum('income_type', ['clt', 'pj', 'other']);
+export const incomeStatus = pgEnum('income_status', ['active', 'paused', 'ended']);
+export const forecastMode = pgEnum('forecast_mode', ['calculated', 'calibrated']);
+
+export const incomeSource = pgTable('income_source', {
+  id: id(),
+  name: text('name').notNull(),
+  type: incomeType('type').notNull(),
+  employerName: text('employer_name'),
+  /** Palavras que aparecem na transação do pagamento (para a conciliação). */
+  matchPattern: text('match_pattern'),
+  accountId: uuid('account_id').references(() => account.id, { onDelete: 'set null' }),
+  categoryId: uuid('category_id').references(() => category.id, { onDelete: 'set null' }),
+  startDate: day('start_date').notNull(),
+  endDate: day('end_date'),
+  status: incomeStatus('status').notNull().default('active'),
+  paymentRule: jsonb('payment_rule').notNull(),
+  deductions: jsonb('deductions').notNull().default({}),
+  pjConfig: jsonb('pj_config'),
+  forecastMode: forecastMode('forecast_mode').notNull().default('calculated'),
+  calibrationFactor: real('calibration_factor').notNull().default(1),
+  prorateFirstMonth: boolean('prorate_first_month').notNull().default(true),
+  ...timestamps,
+});
+
+/** Histórico do salário/faturamento com vigência (sem sobreposição: validado na aplicação). */
+export const incomeSalaryHistory = pgTable(
+  'income_salary_history',
+  {
+    id: id(),
+    incomeSourceId: uuid('income_source_id')
+      .notNull()
+      .references(() => incomeSource.id, { onDelete: 'cascade' }),
+    grossCents: cents('gross_cents').notNull(),
+    validFrom: day('valid_from').notNull(),
+    validTo: day('valid_to'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('income_salary_from_uq').on(t.incomeSourceId, t.validFrom)],
+);
+
+export const incomeEventType = pgEnum('income_event_type', [
+  '13_1',
+  '13_2',
+  'vacation',
+  'plr',
+  'bonus',
+  'other',
+]);
+
+export const incomeEvent = pgTable('income_event', {
+  id: id(),
+  incomeSourceId: uuid('income_source_id')
+    .notNull()
+    .references(() => incomeSource.id, { onDelete: 'cascade' }),
+  type: incomeEventType('type').notNull(),
+  expectedDate: day('expected_date').notNull(),
+  /** Nulo = calculado pelo salário vigente. */
+  grossCents: cents('gross_cents'),
+  /** Valor líquido informado (PLR, outros); quando presente, vale ele. */
+  netCents: cents('net_cents'),
+  vacationDays: integer('vacation_days'),
+  notes: text('notes'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const periodicity = pgEnum('periodicity', ['weekly', 'monthly', 'yearly']);
+export const recurringStatus = pgEnum('recurring_status', ['suggested', 'confirmed', 'ignored']);
+export const recurringNature = pgEnum('recurring_nature', ['fixed', 'variable']);
+
+export const recurringItem = pgTable(
+  'recurring_item',
+  {
+    id: id(),
+    name: text('name').notNull(),
+    direction: direction('direction').notNull(),
+    categoryId: uuid('category_id').references(() => category.id, { onDelete: 'set null' }),
+    accountId: uuid('account_id').references(() => account.id, { onDelete: 'set null' }),
+    /** Chave de detecção (descrição normalizada); nula para itens criados à mão. */
+    descriptionNorm: text('description_norm'),
+    matchPattern: text('match_pattern'),
+    amountCents: cents('amount_cents').notNull(),
+    tolerancePct: real('tolerance_pct').notNull().default(0.05),
+    nature: recurringNature('nature').notNull().default('fixed'),
+    periodicity: periodicity('periodicity').notNull().default('monthly'),
+    anchorDay: integer('anchor_day').notNull(),
+    anchorMonth: integer('anchor_month'),
+    startDate: day('start_date').notNull(),
+    endDate: day('end_date'),
+    status: recurringStatus('status').notNull().default('suggested'),
+    detectionStats: jsonb('detection_stats'),
+    isSubscription: boolean('is_subscription').notNull().default(false),
+    lastAmountCents: cents('last_amount_cents'),
+    lastSeenDate: day('last_seen_date'),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex('recurring_norm_dir_uq').on(t.descriptionNorm, t.direction)],
+);
+
+export const paymentMethod = pgEnum('payment_method', ['pix', 'debit', 'credit']);
+export const plannedStatus = pgEnum('planned_status', ['planned', 'done', 'cancelled']);
+
+export const plannedExpense = pgTable('planned_expense', {
+  id: id(),
+  description: text('description').notNull(),
+  amountCents: cents('amount_cents').notNull(),
+  date: day('date').notNull(),
+  accountId: uuid('account_id').references(() => account.id, { onDelete: 'set null' }),
+  paymentMethod: paymentMethod('payment_method').notNull(),
+  installments: integer('installments').notNull().default(1),
+  categoryId: uuid('category_id').references(() => category.id, { onDelete: 'set null' }),
+  status: plannedStatus('status').notNull().default('planned'),
+  ...timestamps,
+});
+
+export const forecastSource = pgEnum('forecast_source', [
+  'income',
+  'recurring',
+  'planned',
+  'installment',
+]);
+export const forecastStatus = pgEnum('forecast_status', [
+  'previsto',
+  'realizado',
+  'atrasado',
+  'cancelado',
+  'ajustado',
+]);
+export const certainty = pgEnum('certainty', ['certain', 'estimated']);
+
+export const forecastEntry = pgTable(
+  'forecast_entry',
+  {
+    id: id(),
+    sourceType: forecastSource('source_type').notNull(),
+    sourceId: text('source_id').notNull(),
+    direction: direction('direction').notNull(),
+    accountId: uuid('account_id').references(() => account.id, { onDelete: 'set null' }),
+    categoryId: uuid('category_id').references(() => category.id, { onDelete: 'set null' }),
+    label: text('label').notNull(),
+    expectedDate: day('expected_date').notNull(),
+    cashDate: day('cash_date').notNull(),
+    windowStart: day('window_start').notNull(),
+    windowEnd: day('window_end').notNull(),
+    expectedCents: cents('expected_cents').notNull(),
+    lowCents: cents('low_cents').notNull(),
+    highCents: cents('high_cents').notNull(),
+    tolerancePct: real('tolerance_pct').notNull().default(0.05),
+    matchPattern: text('match_pattern'),
+    status: forecastStatus('status').notNull().default('previsto'),
+    certainty: certainty('certainty').notNull().default('certain'),
+    calcBreakdown: jsonb('calc_breakdown'),
+    /** Valor ajustado pelo usuário (vale no lugar do calculado). */
+    userOverrideCents: cents('user_override_cents'),
+    generatedAt: ts('generated_at').notNull().defaultNow(),
+    generatorVersion: integer('generator_version').notNull().default(1),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('forecast_source_date_uq').on(t.sourceType, t.sourceId, t.expectedDate),
+    index('forecast_cash_date_idx').on(t.cashDate),
+  ],
+);
+
+export const matchedBy = pgEnum('matched_by', ['auto', 'user']);
+
+export const forecastMatch = pgTable(
+  'forecast_match',
+  {
+    id: id(),
+    forecastEntryId: uuid('forecast_entry_id')
+      .notNull()
+      .references(() => forecastEntry.id, { onDelete: 'cascade' }),
+    transactionId: uuid('transaction_id')
+      .notNull()
+      .references(() => transaction.id, { onDelete: 'cascade' }),
+    matchedBy: matchedBy('matched_by').notNull(),
+    score: real('score'),
+    expectedCents: cents('expected_cents').notNull(),
+    actualCents: cents('actual_cents').notNull(),
+    deltaCents: cents('delta_cents').notNull(),
+    matchedAt: ts('matched_at').notNull().defaultNow(),
+    /** Desfeito pelo usuário: o par não volta a ser sugerido. */
+    unmatchedAt: ts('unmatched_at'),
+  },
+  (t) => [
+    uniqueIndex('forecast_match_tx_active_uq')
+      .on(t.transactionId)
+      .where(sql`${t.unmatchedAt} is null`),
+    uniqueIndex('forecast_match_entry_active_uq')
+      .on(t.forecastEntryId)
+      .where(sql`${t.unmatchedAt} is null`),
+  ],
+);
