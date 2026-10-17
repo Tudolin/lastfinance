@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-dvh">
       <Sidebar syncLabel={label} syncDetail={names} />
-      <div className="min-w-0 flex-1 pb-28 lg:pb-12">
+      <div className="min-w-0 flex-1 overflow-x-clip pb-[calc(8rem+env(safe-area-inset-bottom))] lg:pb-12">
         <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-5 px-4 pt-5 lg:px-10 lg:pt-7">
           {children}
         </div>
