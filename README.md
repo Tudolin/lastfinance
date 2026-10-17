@@ -154,7 +154,9 @@ A Pluggy atualiza cada item automaticamente até 4×/dia e avisa por webhook. Tr
 reatualizadas só 1×/semana, faturas e lista de investimentos 1×/dia. O botão **Sincronizar** relê o que a Pluggy já tem
 (grátis); **Atualizar no banco** pede uma coleta nova e gasta cota mensal — por isso é limitado a 1×/hora por instituição.
 Como a atualização automática da Pluggy nem sempre acontece todo dia, a função `daily-bank-refresh` pede, às 5h, uma
-coleta nova dos itens que a Pluggy não atualizou nas últimas 20 h (no máximo 1×/dia por item).
+coleta nova dos itens que a Pluggy não atualizou nas últimas 20 h (no máximo 1×/dia por item). Itens do MeuPluggy
+ficam de fora: a Pluggy recusa `updateItem` neles ("MeuPluggy item cant be updated"), e a coleta é feita pelo próprio
+MeuPluggy em meu.pluggy.ai.
 
 ## Categorização com IA (Claude Haiku)
 

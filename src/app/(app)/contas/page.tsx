@@ -6,6 +6,7 @@ import { Pill } from '@/components/ui/badge';
 import { dateTimeBR, relativeTime } from '@/lib/format';
 import { env } from '@/lib/env';
 import { getConnections, getSyncLogs } from '@/server/queries/accounts';
+import { isMeuPluggy } from '@/server/services/pluggy-mapping';
 import { ConnectButton, SyncButtons } from './connect-button';
 import { ImportItemForm } from './import-form';
 
@@ -46,6 +47,7 @@ export default async function AccountsPage() {
         <div className="flex flex-col gap-4">
           {connections.map((c) => {
             const st = statusInfo(c.status, c.errorMessage);
+            const meuPluggy = isMeuPluggy({ id: c.connectorId, name: c.connectorName });
             return (
               <Card
                 key={c.id}
@@ -111,11 +113,12 @@ export default async function AccountsPage() {
                 {st.tone === 'danger' ? (
                   <ConnectButton reconnectItemId={c.pluggyItemId} fake={fake} />
                 ) : (
-                  <SyncButtons pluggyItemId={c.pluggyItemId} />
+                  <SyncButtons pluggyItemId={c.pluggyItemId} canRequestUpdate={!meuPluggy} />
                 )}
                 <span className="text-xs text-ink-2">
-                  “Atualizar no banco” usa a cota mensal do Open Finance. O app já pede uma
-                  atualização todo dia às 5h.
+                  {meuPluggy
+                    ? 'Conexão do MeuPluggy: quem busca os dados no banco é o próprio MeuPluggy (meu.pluggy.ai). Para forçar, atualize por lá; o app recebe o aviso e sincroniza.'
+                    : '“Atualizar no banco” usa a cota mensal do Open Finance. O app já pede uma atualização todo dia às 5h.'}
                 </span>
               </Card>
             );

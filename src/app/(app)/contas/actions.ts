@@ -9,6 +9,7 @@ import { getPluggy } from '@/server/adapters/pluggy/client';
 import { requireUnlocked } from '@/server/auth/request';
 import { getDb, schema } from '@/server/db/client';
 import { DispatchError, dispatch } from '@/server/jobs/dispatch';
+import { isMeuPluggy } from '@/server/services/pluggy-mapping';
 import { refreshConnection } from '@/server/services/sync';
 
 type Result = { ok: true; token?: string } | { ok: false; error: string; needStepUp?: boolean };
@@ -98,6 +99,12 @@ export async function requestUpdateAction(pluggyItemId: string): Promise<Result>
     .from(schema.institutionConnection)
     .where(eq(schema.institutionConnection.pluggyItemId, pluggyItemId));
   if (!conn) return { ok: false, error: 'Conexão não encontrada.' };
+  if (isMeuPluggy({ id: conn.connectorId, name: conn.connectorName })) {
+    return {
+      ok: false,
+      error: 'Conexões do MeuPluggy só podem ser atualizadas em meu.pluggy.ai.',
+    };
+  }
   const last = conn.pluggyLastUpdatedAt?.getTime() ?? 0;
   if (Date.now() - last < MIN_MANUAL_UPDATE_MINUTES * 60_000) {
     return {

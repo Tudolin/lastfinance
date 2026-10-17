@@ -113,13 +113,19 @@ export function ConnectButton({
   );
 }
 
-export function SyncButtons({ pluggyItemId }: { pluggyItemId: string }) {
+export function SyncButtons({
+  pluggyItemId,
+  canRequestUpdate = true,
+}: {
+  pluggyItemId: string;
+  canRequestUpdate?: boolean;
+}) {
   const router = useRouter();
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string }>();
   const [pending, start] = useTransition();
   return (
     <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-2 gap-2">
+      <div className={`grid gap-2 ${canRequestUpdate ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <Button
           variant="outline"
           disabled={pending}
@@ -138,25 +144,27 @@ export function SyncButtons({ pluggyItemId }: { pluggyItemId: string }) {
           <RefreshCw className="size-4" aria-hidden="true" />
           Sincronizar
         </Button>
-        <Button
-          variant="outline"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              const r = await requestUpdateAction(pluggyItemId);
-              setMsg(
-                r.ok
-                  ? {
-                      tone: 'ok',
-                      text: 'Pedido enviado ao banco. Os dados chegam em alguns minutos.',
-                    }
-                  : { tone: 'err', text: r.error },
-              );
-            })
-          }
-        >
-          Atualizar no banco
-        </Button>
+        {canRequestUpdate ? (
+          <Button
+            variant="outline"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const r = await requestUpdateAction(pluggyItemId);
+                setMsg(
+                  r.ok
+                    ? {
+                        tone: 'ok',
+                        text: 'Pedido enviado ao banco. Os dados chegam em alguns minutos.',
+                      }
+                    : { tone: 'err', text: r.error },
+                );
+              })
+            }
+          >
+            Atualizar no banco
+          </Button>
+        ) : null}
       </div>
       {msg ? (
         <p
