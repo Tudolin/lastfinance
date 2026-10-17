@@ -4,6 +4,8 @@ import { dateTimeBR } from '@/lib/format';
 import { getSyncLogs } from '@/server/queries/accounts';
 import { recentWebhookEvents } from '@/server/services/webhooks';
 import { requireUnlocked } from '@/server/auth/request';
+import { inngestDiagnostics, type KeyInfo } from '@/server/jobs/inngest-diag';
+import { InngestPing } from './inngest-ping';
 
 export const metadata = { title: 'Status da sincronização' };
 
@@ -19,6 +21,18 @@ const STATUS_LABEL: Record<string, string> = {
   ignored: 'ignorado',
 };
 
+function describeKey(k: KeyInfo) {
+  if (!k.present) return 'ausente';
+  return [
+    k.prefix ?? null,
+    `${k.length} caracteres`,
+    k.last4 ? `termina em …${k.last4}` : null,
+    k.untrimmed ? 'tinha espaço/quebra de linha (o app ignora)' : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 function Dot({ status }: { status: string }) {
   const bad = status === 'error' || status === 'failed';
   const busy = status === 'running' || status === 'enqueued' || status === 'received';
@@ -33,6 +47,20 @@ function Dot({ status }: { status: string }) {
 export default async function StatusPage() {
   await requireUnlocked();
   const [logs, events] = await Promise.all([getSyncLogs(50), recentWebhookEvents(30)]);
+  const diag = inngestDiagnostics();
+  const diagRows: [string, string][] = [
+    [
+      'Deploy',
+      [diag.deploy.vercelEnv, diag.deploy.branch, diag.deploy.commit].filter(Boolean).join(' · ') ||
+        '—',
+    ],
+    ['INNGEST_EVENT_KEY', describeKey(diag.eventKey)],
+    ['INNGEST_SIGNING_KEY', describeKey(diag.signingKey)],
+    ['INNGEST_SIGNING_KEY_FALLBACK', describeKey(diag.signingKeyFallback)],
+    ['Ambiente enviado (x-inngest-env)', diag.envHeader ?? 'nenhum'],
+    ['Envio de eventos', diag.eventApi],
+    ['Variáveis que mudam o destino', diag.overrides.join(', ') || 'nenhuma'],
+  ];
   return (
     <>
       <PageHeader title="Status da sincronização" />
@@ -80,6 +108,18 @@ export default async function StatusPage() {
             </table>
           </div>
           {logs.length === 0 ? <p className="text-sm text-ink-2">Nenhuma execução ainda.</p> : null}
+        </Card>
+        <Card className="flex flex-col gap-3">
+          <CardTitle>Fila (Inngest) neste deploy</CardTitle>
+          <dl className="grid grid-cols-1 gap-y-2 text-[13px] sm:grid-cols-[auto_1fr] sm:gap-x-4">
+            {diagRows.map(([k, v]) => (
+              <div key={k} className="contents">
+                <dt className="font-semibold text-ink-2">{k}</dt>
+                <dd className="font-mono text-xs break-all">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          <InngestPing />
         </Card>
         <Card className="flex flex-col gap-2">
           <CardTitle>Webhooks recebidos</CardTitle>
