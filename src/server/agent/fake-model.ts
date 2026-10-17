@@ -10,6 +10,11 @@ const brl = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', curren
 function pickTool(q: string): { name: string; input: Record<string, unknown> } {
   const t = foldText(q);
   const amount = /(\d+(?:[.,]\d+)?)/.exec(q.replace(/\./g, '').replace(',', '.'));
+  if (/FINANCI/.test(t))
+    return {
+      name: 'simulate_financing',
+      input: { assetPrice: 70000, downPayment: 10000, monthlyRatePct: 1.5, months: 48 },
+    };
   if (/POSSO|COMPRAR|GASTAR R?\$?/.test(t) && amount)
     return { name: 'can_i_spend', input: { amount: Number(amount[1]), method: 'pix' } };
   if (/GASTEI|CATEGORIA|ONDE/.test(t)) {
@@ -41,6 +46,11 @@ function summarize(name: string, data: Record<string, unknown>): string {
   if (name === 'get_forecast') {
     const base = data.base as { min: { balance: number; date: string } };
     return `Menor saldo previsto: **${brl(base.min.balance)}** em ${base.min.date}.`;
+  }
+  if (name === 'simulate_financing') {
+    const p = data.price as { firstPayment: number; cetAnnual: string };
+    const sac = data.sac as { firstPayment: number; lastPayment: number };
+    return `Na tabela Price a parcela fica em **${brl(p.firstPayment)}** (CET de ${p.cetAnnual} ao ano). No SAC começa em ${brl(sac.firstPayment)} e termina em ${brl(sac.lastPayment)}.`;
   }
   return 'Pronto.';
 }

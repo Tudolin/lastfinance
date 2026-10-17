@@ -21,6 +21,9 @@ Plano completo, schema e fases em [`docs/PLANO.md`](docs/PLANO.md).
   (saldos, gastos por categoria, histórico mensal, transações, orçamentos, cartões, previsão, Posso gastar?, renda,
   recorrências, fixas × variáveis). Conversas guardadas e apagáveis, teto de gasto mensal e borrão no modo "ocultar
   valores".
+- **6 (parte 2)** — **Cenários**: financiamento Price × SAC com IOF de pessoa física, seguro prestamista, tarifas e CET
+  (TIR por Newton–Raphson com bisseção de reserva), tabela de parcelas e impacto na previsão de caixa de 12 meses. O
+  assistente simula qualquer "e se" (pontual, recorrente, financiamento, parcelado no cartão, mudança de renda).
 
 ## Stack
 

@@ -64,7 +64,6 @@ export default async function AssistantPage({
           />
         </Card>
         <ChatClient
-          key={current?.conversation.id ?? 'nova'}
           conversationId={current?.conversation.id ?? null}
           initial={current?.items ?? []}
           disabled={!enabled}
