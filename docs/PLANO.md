@@ -1,6 +1,6 @@
 # lastfinance — Plano de arquitetura e entrega
 
-> Status: **aprovado** (Hobby, Open Finance, Drizzle + Inngest, `*.vercel.app`, sem importação de planilha, um PR por fase). Fases 1, 2 e 3 implementadas.
+> Status: **aprovado** (Hobby, Open Finance, Drizzle + Inngest, `*.vercel.app`, sem importação de planilha, um PR por fase). Fases 1, 2 e 3 implementadas; Fase 6 em andamento (assistente).
 > Data da pesquisa: 16/10/2026. Tudo marcado com 🔎 foi conferido na documentação ou em fontes públicas nesta data; tudo marcado com ⚠️ ainda precisa ser confirmado (na sua conta ou em fonte oficial) e tem um passo explícito no plano para isso.
 
 ---

@@ -33,6 +33,10 @@ const schema = z
     ANTHROPIC_API_KEY: z.string().optional(),
     /** Modelo padrão da camada de IA. */
     AI_MODEL: z.string().default('claude-haiku-5-5'),
+    /** Modelo do assistente (chat com ferramentas). */
+    AGENT_MODEL: z.string().default('claude-opus-5-5'),
+    /** Teto de gasto mensal do assistente, em dólares. */
+    AGENT_MONTHLY_BUDGET_USD: z.coerce.number().nonnegative().default(10),
     /** true = IA falsa e determinística (dev/testes, sem custo). */
     AI_FAKE: bool,
 
