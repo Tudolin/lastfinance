@@ -17,6 +17,8 @@ export const userSettingsSchema = z.object({
   reserveMinCents: z.number().int().min(0).max(100_000_000).default(50000),
   /** Como estimar o gasto variável na previsão: média de 3 ou 6 meses, ou pelos orçamentos. */
   forecastVariableMode: z.enum(['avg3', 'avg6', 'budget']).default('avg3'),
+  /** Reserva de emergência: quantos meses de gastos essenciais guardar. */
+  emergencyMonths: z.number().int().min(1).max(24).default(6),
   /** Anti-replay do TOTP: último contador aceito. */
   totpLastCounter: z.number().int().optional(),
 });

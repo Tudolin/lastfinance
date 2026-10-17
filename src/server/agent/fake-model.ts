@@ -15,6 +15,14 @@ function pickTool(q: string): { name: string; input: Record<string, unknown> } {
       name: 'simulate_financing',
       input: { assetPrice: 70000, downPayment: 10000, monthlyRatePct: 1.5, months: 48 },
     };
+  if (/PATRIMONIO/.test(t)) return { name: 'get_net_worth', input: {} };
+  if (/RESERVA|META|CAIXINHA/.test(t)) return { name: 'get_savings_and_goals', input: {} };
+  if (/ASSINATURA/.test(t)) return { name: 'get_subscriptions', input: {} };
+  if (/RENDE/.test(t))
+    return {
+      name: 'simulate_savings',
+      input: { initial: 1000, monthly: 500, months: 24, cdiAnnualPct: 14 },
+    };
   if (/POSSO|COMPRAR|GASTAR R?\$?/.test(t) && amount)
     return { name: 'can_i_spend', input: { amount: Number(amount[1]), method: 'pix' } };
   if (/GASTEI|CATEGORIA|ONDE/.test(t)) {
@@ -52,6 +60,16 @@ function summarize(name: string, data: Record<string, unknown>): string {
     const sac = data.sac as { firstPayment: number; lastPayment: number };
     return `Na tabela Price a parcela fica em **${brl(p.firstPayment)}** (CET de ${p.cetAnnual} ao ano). No SAC começa em ${brl(sac.firstPayment)} e termina em ${brl(sac.lastPayment)}.`;
   }
+  if (name === 'get_net_worth')
+    return `Seu patrimônio líquido hoje é **${brl(Number(data.net ?? 0))}**.`;
+  if (name === 'get_savings_and_goals') {
+    const e = data.emergency as { months: number | null };
+    return `Investido: **${brl(Number(data.invested ?? 0))}**. A reserva cobre ${e.months ?? 'muitos'} meses de gastos essenciais.`;
+  }
+  if (name === 'get_subscriptions')
+    return `Assinaturas: **${brl(Number(data.monthly ?? 0))}** por mês.`;
+  if (name === 'simulate_savings')
+    return `Em 24 meses você teria **${brl(Number(data.net ?? 0))}** líquidos.`;
   return 'Pronto.';
 }
 

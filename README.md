@@ -17,6 +17,11 @@ Plano completo, schema e fases em [`docs/PLANO.md`](docs/PLANO.md).
   dias úteis, 13º, férias, PLR e bônus; recorrências detectadas; gastos planejados; conciliação Planejado × Realizado;
   previsão de caixa dia a dia para 30/60/90 dias com faixa de incerteza e cenários; **Posso gastar?** e "livre para gastar
   por dia".
+- **4** — **Caixinhas e metas**: investimentos conectados, reserva de emergência (meses cobertos pelos gastos essenciais),
+  metas vinculadas a um investimento ou com valor manual, simulador de rendimento a X% do CDI com IR regressivo por aporte
+  × poupança e aporte necessário para um alvo. CDI e Selic do Banco Central (SGS 12/11/432) num job diário.
+  **Patrimônio**: contas + investimentos − fatura aberta, com retrato diário e evolução de 12 meses. **Assinaturas**:
+  total mensal/anual, aumentos de preço, novas e paradas. O assistente consulta tudo isso.
 - **6 (parte 1)** — **Assistente**: chat em português com streaming, que responde consultando as mesmas consultas das telas
   (saldos, gastos por categoria, histórico mensal, transações, orçamentos, cartões, previsão, Posso gastar?, renda,
   recorrências, fixas × variáveis). Conversas guardadas e apagáveis, teto de gasto mensal e borrão no modo "ocultar

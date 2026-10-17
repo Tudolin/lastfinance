@@ -29,6 +29,13 @@
       "when": 1792263369513,
       "tag": "0003_fase6_assistente",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792264967314,
+      "tag": "0004_fase4_patrimonio",
+      "breakpoints": true
     }
   ]
 }

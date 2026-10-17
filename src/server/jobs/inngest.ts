@@ -6,6 +6,8 @@ import { isNull } from 'drizzle-orm';
 import { aiBatchData, itemSyncData, webhookReceivedData } from './events';
 import { applyBatchJob } from '@/server/services/categorize';
 import { refreshStaleItems } from '@/server/services/item-refresh';
+import { refreshRates } from '@/server/services/rates';
+import { takeNetWorthSnapshot } from '@/server/services/wealth';
 import { handle } from './handlers';
 import type { JobStep } from './step';
 import { stripsBranchEnvHeader } from './inngest-diag';
@@ -110,6 +112,16 @@ export const dailyRefreshFn = inngest.createFunction(
   async ({ step }) => step.run('request-updates', () => refreshStaleItems()),
 );
 
+/** Todo dia: CDI/Selic do Banco Central e o retrato do patrimônio. */
+export const dailyWealthFn = inngest.createFunction(
+  { id: 'daily-rates-and-net-worth', triggers: [{ cron: 'TZ=America/Sao_Paulo 30 6 * * *' }] },
+  async ({ step }) => {
+    const rates = await step.run('rates', () => refreshRates());
+    const nw = await step.run('net-worth', async () => (await takeNetWorthSnapshot()).netCents);
+    return { rates, netCents: nw };
+  },
+);
+
 /**
  * Carga histórica de categorização via Message Batches (50% mais barato): espera o lote terminar
  * (normalmente < 1 h, no máximo 24 h) com sleeps duráveis e aplica os resultados.
@@ -131,5 +143,6 @@ export const functions = [
   itemSyncFn,
   fallbackSyncFn,
   dailyRefreshFn,
+  dailyWealthFn,
   applyAiBatchFn,
 ];

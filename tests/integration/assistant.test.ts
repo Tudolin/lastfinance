@@ -102,6 +102,7 @@ describe('assistente', () => {
         monthlyRatePct: 1.5,
         months: 48,
       },
+      simulate_savings: { initial: 1000, monthly: 200, months: 12, cdiAnnualPct: 14 },
       simulate_scenario: {
         changes: [
           {
