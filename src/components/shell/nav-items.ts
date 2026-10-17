@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  Bell,
   Bot,
   Briefcase,
   Calculator,
@@ -41,6 +42,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/planejados', label: 'Gastos planejados', icon: ShoppingBag },
   { href: '/cenarios', label: 'Cenários', icon: Calculator },
   { href: '/assistente', label: 'Assistente', icon: Bot },
+  { href: '/alertas', label: 'Alertas', icon: Bell },
   { href: '/contas', label: 'Contas conectadas', icon: Landmark },
 ];
 
