@@ -57,7 +57,12 @@ export default async function StatusPage() {
     ['INNGEST_EVENT_KEY', describeKey(diag.eventKey)],
     ['INNGEST_SIGNING_KEY', describeKey(diag.signingKey)],
     ['INNGEST_SIGNING_KEY_FALLBACK', describeKey(diag.signingKeyFallback)],
-    ['Ambiente enviado (x-inngest-env)', diag.envHeader ?? 'nenhum'],
+    [
+      'Ambiente enviado (x-inngest-env)',
+      diag.envHeaderStripped
+        ? `nenhum (o app remove "${diag.envHeader ?? ''}" em produção)`
+        : (diag.envHeader ?? 'nenhum'),
+    ],
     ['Envio de eventos', diag.eventApi],
     ['Variáveis que mudam o destino', diag.overrides.join(', ') || 'nenhuma'],
   ];

@@ -23,6 +23,17 @@ export function InngestPing() {
           {result.ok ? `Evento aceito pelo Inngest (${result.id ?? 'sem id'}).` : result.error}
         </p>
       ) : null}
+      {result?.probes.length ? (
+        <ul className="font-mono text-xs text-ink-2">
+          {result.probes.map((p) => (
+            <li key={p.envHeader ?? 'none'}>
+              {p.envHeader ? `com x-inngest-env: ${p.envHeader}` : 'sem x-inngest-env'} → HTTP{' '}
+              {p.status ?? '—'}
+              {p.error ? ` (${p.error})` : ''}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
