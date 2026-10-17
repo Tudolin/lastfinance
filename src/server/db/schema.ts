@@ -781,3 +781,37 @@ export const forecastMatch = pgTable(
       .where(sql`${t.unmatchedAt} is null`),
   ],
 );
+
+// ───────────────────────── Fase 6: assistente ─────────────────────────
+
+export const chatConversation = pgTable(
+  'chat_conversation',
+  {
+    id: id(),
+    title: text('title').notNull(),
+    ...timestamps,
+  },
+  (t) => [index('chat_conversation_updated_idx').on(t.updatedAt)],
+);
+
+export const chatRole = pgEnum('chat_role', ['user', 'assistant']);
+
+/**
+ * Uma mensagem no formato da API (conteúdo em blocos, incluindo tool_use/tool_result), na ordem
+ * em que foi enviada. Mensagens só com tool_result ficam ocultas na tela.
+ */
+export const chatMessage = pgTable(
+  'chat_message',
+  {
+    id: id(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => chatConversation.id, { onDelete: 'cascade' }),
+    seq: integer('seq').notNull(),
+    role: chatRole('role').notNull(),
+    content: jsonb('content').notNull(),
+    hidden: boolean('hidden').notNull().default(false),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('chat_message_seq_uq').on(t.conversationId, t.seq)],
+);

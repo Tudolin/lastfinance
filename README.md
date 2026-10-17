@@ -17,6 +17,10 @@ Plano completo, schema e fases em [`docs/PLANO.md`](docs/PLANO.md).
   dias úteis, 13º, férias, PLR e bônus; recorrências detectadas; gastos planejados; conciliação Planejado × Realizado;
   previsão de caixa dia a dia para 30/60/90 dias com faixa de incerteza e cenários; **Posso gastar?** e "livre para gastar
   por dia".
+- **6 (parte 1)** — **Assistente**: chat em português com streaming, que responde consultando as mesmas consultas das telas
+  (saldos, gastos por categoria, histórico mensal, transações, orçamentos, cartões, previsão, Posso gastar?, renda,
+  recorrências, fixas × variáveis). Conversas guardadas e apagáveis, teto de gasto mensal e borrão no modo "ocultar
+  valores".
 
 ## Stack
 
@@ -88,6 +92,8 @@ o do Playwright, aponte `PW_CHROMIUM_PATH`.
 | `CRON_SECRET`                               | em produção            | Protege `/api/cron/fallback` (a Vercel envia `Authorization: Bearer`).                                                |
 | `ANTHROPIC_API_KEY`                         | recomendado            | Chave da Anthropic, só no backend. Sem ela, a categorização usa apenas regras e o histórico de estabelecimentos.      |
 | `AI_MODEL`                                  | não                    | Padrão `claude-haiku-5-5`.                                                                                            |
+| `AGENT_MODEL`                               | não                    | Modelo do assistente. Padrão `claude-opus-5-5`.                                                                       |
+| `AGENT_MONTHLY_BUDGET_USD`                  | não                    | Teto de gasto mensal do assistente em dólares (padrão 10). Ao atingir, ele pausa até o dia 1º.                        |
 | `AI_FAKE`                                   | não                    | `true` = IA falsa e determinística (dev/E2E, sem custo).                                                              |
 
 ## Deploy na Vercel (plano Hobby)
