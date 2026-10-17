@@ -15,7 +15,15 @@ function asJobStep(step: {
   return { run: <T>(id: string, fn: () => Promise<T>) => step.run(id, fn) as Promise<T> };
 }
 
-export const inngest = new Inngest({ id: 'lastfinance' });
+/** Valor colado na Vercel com espaço ou quebra de linha vira 404 no envio e assinatura inválida. */
+const clean = (v: string | undefined) => v?.trim() || undefined;
+
+export const inngest = new Inngest({
+  id: 'lastfinance',
+  eventKey: clean(process.env.INNGEST_EVENT_KEY),
+  signingKey: clean(process.env.INNGEST_SIGNING_KEY),
+  signingKeyFallback: clean(process.env.INNGEST_SIGNING_KEY_FALLBACK),
+});
 
 const webhookReceived = eventType('pluggy/webhook.received', { schema: webhookReceivedData });
 const itemSync = eventType('pluggy/item.sync', { schema: itemSyncData });
