@@ -13,6 +13,12 @@ import {
 } from '@/domain/dates/local-date';
 import { toCents } from '@/domain/money';
 import { scenarioChangeSchema } from '@/domain/scenarios/changes';
+import {
+  projectGrowth,
+  projectTaxFree,
+  requiredMonthly,
+  savingsAccountAnnual,
+} from '@/domain/investments/yield';
 import { simulateFinancing, type FinancingResult } from '@/domain/scenarios/financing';
 import { foldText } from '@/domain/text/normalize';
 import { getBalances, getOpenBills } from '@/server/queries/accounts';
@@ -25,6 +31,7 @@ import {
 import { getIncomeView, getPlannedView, getRecurringView } from '@/server/queries/income';
 import { getBudgets, getCardsOverview, getNatureAnalysis } from '@/server/queries/planning';
 import { simulateScenario } from '@/server/queries/scenarios';
+import { getSavingsView, getSubscriptionsView, getWealthView } from '@/server/queries/wealth';
 import { listTransactions, summarize } from '@/server/queries/transactions';
 
 /**
@@ -513,6 +520,112 @@ export const TOOLS = [
           afterCents: m.after,
         })),
         financings: r.financings.map((f) => ({ label: f.label, ...financingSummary(f) })),
+      };
+    },
+  }),
+  tool({
+    name: 'get_savings_and_goals',
+    label: 'Olhando investimentos e metas',
+    description:
+      'Investimentos conectados (caixinhas, CDBs: saldo líquido, rendimento, taxa), metas (alvo, guardado, data, quanto guardar por mês, se está no ritmo), reserva de emergência (quantos meses de gastos essenciais o dinheiro disponível cobre e quanto falta) e CDI/Selic atuais do Banco Central.',
+    input: z.object({}),
+    run: async () => {
+      const v = await getSavingsView();
+      return {
+        today: v.today,
+        cdiAnnual: pct(v.rates.cdiAnnual),
+        selicAnnual: pct(v.rates.selicAnnual),
+        ratesDate: v.rates.cdiDate,
+        investedCents: v.investedCents,
+        investments: v.investments,
+        goals: v.goals.map((g) => ({
+          name: g.name,
+          targetCents: g.targetCents,
+          targetDate: g.targetDate,
+          linkedInvestment: g.investmentName,
+          ...g.progress,
+          pace: g.progress.status,
+          status: g.status,
+        })),
+        emergency: {
+          ...v.emergency,
+          months: Number.isFinite(v.emergency.months)
+            ? Math.round(v.emergency.months * 10) / 10
+            : null,
+        },
+      };
+    },
+  }),
+  tool({
+    name: 'get_net_worth',
+    label: 'Calculando o patrimônio',
+    description:
+      'Patrimônio líquido hoje (contas + investimentos − fatura em aberto dos cartões), com a composição por conta e a variação em 30 dias e desde o primeiro registro; inclui o fim de cada mês dos últimos 12 meses.',
+    input: z.object({}),
+    run: async () => {
+      const v = await getWealthView();
+      const byMonth = new Map<string, (typeof v.history)[number]>();
+      for (const h of v.history) byMonth.set(h.date.slice(0, 7), h);
+      return {
+        today: v.today,
+        netCents: v.now.netCents,
+        cashCents: v.now.cashCents,
+        investmentsCents: v.now.investmentsCents,
+        cardDebtCents: v.now.cardDebtCents,
+        breakdown: v.now.breakdown,
+        change30d: v.change30d,
+        changeSinceStart: v.changeSinceStart,
+        monthEnds: [...byMonth.values()].map((h) => ({ date: h.date, netCents: h.netCents })),
+      };
+    },
+  }),
+  tool({
+    name: 'get_subscriptions',
+    label: 'Listando assinaturas',
+    description:
+      'Assinaturas (recorrências marcadas como assinatura): valor, total mensal e anual, aumentos de preço, as novas (últimos 60 dias) e as que pararam de cobrar.',
+    input: z.object({}),
+    run: async () => {
+      const v = await getSubscriptionsView();
+      return { monthlyCents: v.monthlyCents, annualCents: v.annualCents, items: v.items };
+    },
+  }),
+  tool({
+    name: 'simulate_savings',
+    label: 'Simulando o rendimento',
+    description:
+      'Projeta um investimento pós-fixado (CDB/caixinha a X% do CDI) com aporte inicial e mensal: valor líquido no fim (IR regressivo por aporte), total aportado, IR, comparação com a poupança e, se informado um alvo, o aporte mensal necessário. Sem cdiAnnualPct, usa o CDI atual do Banco Central.',
+    input: z.object({
+      initial: z.number().min(0).default(0).describe('Valor inicial, em reais'),
+      monthly: z.number().min(0).default(0).describe('Aporte mensal, em reais'),
+      months: z.number().int().min(1).max(600),
+      cdiPct: z.number().min(0).max(300).default(100).describe('% do CDI (100 = 100%)'),
+      cdiAnnualPct: z.number().min(0).max(100).optional().describe('CDI ao ano, em %'),
+      target: z.number().positive().optional().describe('Valor que quer atingir, em reais'),
+    }),
+    run: async (i) => {
+      const { rates } = await getSavingsView();
+      const cdiAnnual = i.cdiAnnualPct != null ? i.cdiAnnualPct / 100 : rates.cdiAnnual;
+      if (cdiAnnual == null)
+        return { error: 'Sem CDI do Banco Central ainda; informe cdiAnnualPct.' };
+      const base = {
+        initialCents: toCents(i.initial),
+        months: i.months,
+        cdiAnnual,
+        cdiPct: i.cdiPct,
+      };
+      const end = projectGrowth({ ...base, monthlyCents: toCents(i.monthly) }).at(-1)!;
+      const savings = projectTaxFree(
+        base.initialCents,
+        toCents(i.monthly),
+        i.months,
+        savingsAccountAnnual(rates.selicAnnual ?? cdiAnnual + 0.001),
+      );
+      return {
+        cdiAnnual: pct(cdiAnnual),
+        ...end,
+        savingsAccountCents: savings,
+        requiredMonthlyCents: i.target ? requiredMonthly(toCents(i.target), base) : undefined,
       };
     },
   }),

@@ -815,3 +815,44 @@ export const chatMessage = pgTable(
   },
   (t) => [uniqueIndex('chat_message_seq_uq').on(t.conversationId, t.seq)],
 );
+
+// ───────────────────────── Fase 4: rendimento, metas, patrimônio ─────────────────────────
+
+/** Séries do Banco Central (SGS): 12 = CDI diário, 11 = Selic diária, 432 = meta Selic (% a.a.). */
+export const rateHistory = pgTable(
+  'rate_history',
+  {
+    series: text('series').notNull(),
+    date: day('date').notNull(),
+    /** % ao dia (séries diárias) ou % ao ano (meta Selic), como o BCB publica. */
+    rate: real('rate').notNull(),
+    fetchedAt: ts('fetched_at').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('rate_history_series_date_uq').on(t.series, t.date)],
+);
+
+export const goalStatus = pgEnum('goal_status', ['active', 'done', 'archived']);
+
+export const goal = pgTable('goal', {
+  id: id(),
+  name: text('name').notNull(),
+  targetCents: cents('target_cents').notNull(),
+  targetDate: day('target_date'),
+  /** Investimento da Pluggy que guarda o dinheiro desta meta (o saldo dele conta como guardado). */
+  investmentId: uuid('investment_id').references(() => investment.id, { onDelete: 'set null' }),
+  /** Valor guardado informado à mão (quando não há investimento vinculado). */
+  manualSavedCents: cents('manual_saved_cents').notNull().default(0),
+  isEmergency: boolean('is_emergency').notNull().default(false),
+  status: goalStatus('status').notNull().default('active'),
+  ...timestamps,
+});
+
+export const netWorthSnapshot = pgTable('net_worth_snapshot', {
+  date: day('date').primaryKey(),
+  cashCents: cents('cash_cents').notNull(),
+  investmentsCents: cents('investments_cents').notNull(),
+  cardDebtCents: cents('card_debt_cents').notNull(),
+  netCents: cents('net_cents').notNull(),
+  breakdown: jsonb('breakdown'),
+  ...timestamps,
+});
