@@ -201,7 +201,13 @@ export interface PluggyGateway {
   createConnectToken(opts: { itemId?: string; webhookUrl?: string }): Promise<string>;
   /** Pede à Pluggy uma nova coleta (gasta cota do Open Finance). */
   requestItemUpdate(itemId: string): Promise<void>;
+  /** Webhooks globais da conta Pluggy (avisam quando um item termina de atualizar). */
+  listWebhooks(): Promise<PluggyWebhook[]>;
+  createWebhook(url: string, headers: Record<string, string>): Promise<PluggyWebhook>;
+  deleteWebhook(id: string): Promise<void>;
 }
+
+export type PluggyWebhook = { id: string; url: string; event: string };
 
 /** Extrai o cursor `after` de um `next` como "?after=abc&dateFrom=…". */
 export function parseAfterCursor(next: string | null | undefined): string | null {

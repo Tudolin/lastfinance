@@ -98,6 +98,20 @@ export class PluggySdkGateway implements PluggyGateway {
   async requestItemUpdate(itemId: string) {
     await this.sdk.updateItem(itemId);
   }
+
+  async listWebhooks() {
+    const r = await this.sdk.fetchWebhooks();
+    return r.results.map((w) => ({ id: w.id, url: w.url, event: w.event }));
+  }
+
+  async createWebhook(url: string, headers: Record<string, string>) {
+    const w = await this.sdk.createWebhook('all', url, headers);
+    return { id: w.id, url: w.url, event: w.event };
+  }
+
+  async deleteWebhook(id: string) {
+    await this.sdk.deleteWebhook(id);
+  }
 }
 
 let gateway: PluggyGateway | undefined;

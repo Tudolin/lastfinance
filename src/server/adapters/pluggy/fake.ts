@@ -21,6 +21,7 @@ import type {
   PluggyInvestmentTx,
   PluggyItem,
   PluggyTransaction,
+  PluggyWebhook,
   TransactionQuery,
 } from './types';
 
@@ -102,6 +103,22 @@ export class FakePluggy implements PluggyGateway {
 
   async requestItemUpdate(itemId: string) {
     this.updateRequests.push(itemId);
+  }
+
+  webhooks: (PluggyWebhook & { headers: Record<string, string> })[] = [];
+
+  async listWebhooks() {
+    return this.webhooks.map(({ id, url, event }) => ({ id, url, event }));
+  }
+
+  async createWebhook(url: string, headers: Record<string, string>) {
+    const w = { id: this.nextId('wh'), url, event: 'all', headers };
+    this.webhooks.push(w);
+    return { id: w.id, url, event: 'all' };
+  }
+
+  async deleteWebhook(id: string) {
+    this.webhooks = this.webhooks.filter((w) => w.id !== id);
   }
 
   // ───────── Mutação (testes e conexão falsa) ─────────
