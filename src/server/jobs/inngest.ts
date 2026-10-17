@@ -6,6 +6,7 @@ import { isNull } from 'drizzle-orm';
 import { aiBatchData, itemSyncData, webhookReceivedData } from './events';
 import { applyBatchJob } from '@/server/services/categorize';
 import { refreshStaleItems } from '@/server/services/item-refresh';
+import { evaluateAlerts } from '@/server/services/alerts';
 import { refreshRates } from '@/server/services/rates';
 import { takeNetWorthSnapshot } from '@/server/services/wealth';
 import { handle } from './handlers';
@@ -122,6 +123,16 @@ export const dailyWealthFn = inngest.createFunction(
   },
 );
 
+/** De hora em hora: procura situações que merecem aviso e envia por push (fora do silêncio). */
+export const alertsFn = inngest.createFunction(
+  {
+    id: 'evaluate-alerts',
+    triggers: [{ cron: 'TZ=America/Sao_Paulo 5 * * * *' }],
+    concurrency: { limit: 1 },
+  },
+  async ({ step }) => step.run('evaluate', () => evaluateAlerts()),
+);
+
 /**
  * Carga histórica de categorização via Message Batches (50% mais barato): espera o lote terminar
  * (normalmente < 1 h, no máximo 24 h) com sleeps duráveis e aplica os resultados.
@@ -144,5 +155,6 @@ export const functions = [
   fallbackSyncFn,
   dailyRefreshFn,
   dailyWealthFn,
+  alertsFn,
   applyAiBatchFn,
 ];

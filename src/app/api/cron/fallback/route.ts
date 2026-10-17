@@ -4,6 +4,7 @@ import { dispatch } from '@/server/jobs/dispatch';
 import { safeEqual } from '@/server/security/crypto';
 import { getDb, schema } from '@/server/db/client';
 import { isNull } from 'drizzle-orm';
+import { evaluateAlerts } from '@/server/services/alerts';
 import { refreshRates } from '@/server/services/rates';
 import { takeNetWorthSnapshot } from '@/server/services/wealth';
 
@@ -33,5 +34,6 @@ export async function GET(req: Request) {
   // redundância do job diário do Inngest: taxas do BCB e retrato do patrimônio
   const rates = await refreshRates().catch((e: Error) => e.message);
   await takeNetWorthSnapshot().catch(() => null);
-  return NextResponse.json({ ok: true, items: items.length, rates });
+  const alerts = await evaluateAlerts().catch((e: Error) => e.name);
+  return NextResponse.json({ ok: true, items: items.length, rates, alerts });
 }

@@ -40,6 +40,12 @@ const schema = z
     /** true = IA falsa e determinística (dev/testes, sem custo). */
     AI_FAKE: bool,
 
+    /** Web Push (alertas no celular). Sem as chaves, os alertas ficam só na tela de Alertas. */
+    VAPID_PUBLIC_KEY: z.string().trim().optional(),
+    VAPID_PRIVATE_KEY: z.string().trim().optional(),
+    VAPID_SUBJECT: z.string().trim().optional(),
+    PUSH_FAKE: bool,
+
     JOBS_MODE: z.enum(['inngest', 'inline']).default('inngest'),
     INNGEST_EVENT_KEY: z.string().optional(),
     INNGEST_SIGNING_KEY: z.string().optional(),

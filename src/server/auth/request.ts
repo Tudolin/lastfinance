@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { cache } from 'react';
 import { env } from '@/lib/env';
 import { ipPrefix, validateSessionToken, type ClientInfo, type SessionState } from './session';
+import { systemSession } from './system';
 
 export function sessionCookieName() {
   // __Host- exige HTTPS; em desenvolvimento (http://localhost) usamos o nome simples.
@@ -63,6 +64,8 @@ export const getCurrentSession = cache(async (): Promise<SessionState | null> =>
 });
 
 export async function requireSession(): Promise<SessionState> {
+  const sys = systemSession();
+  if (sys) return sys;
   const s = await getCurrentSession();
   if (!s) redirect('/login');
   return s;

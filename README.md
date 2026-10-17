@@ -25,6 +25,9 @@ Plano completo, schema e fases em [`docs/PLANO.md`](docs/PLANO.md).
 - **Relatórios** — relatório do mês (receitas, gastos, sobra e aplicado × mês anterior, % guardado × meta, categorias
   com variação, maiores gastos, orçamentos estourados), visão anual mês a mês com categorias, e exportação das transações
   em CSV (`;`, vírgula decimal, UTF-8 com BOM: abre direto no Excel e no Planilhas).
+- **5** — **Alertas**: caixa de entrada e notificações no celular (Web Push) para gasto grande, orçamento em 80%/100%,
+  previsão de saldo negativo, fatura vencendo em até 3 dias, salário atrasado, conexão com erro e assinatura nova ou mais
+  cara. Verifica de hora em hora (Inngest), sem repetir o mesmo aviso, com horário de silêncio e tipos ligáveis.
 - **6 (parte 1)** — **Assistente**: chat em português com streaming, que responde consultando as mesmas consultas das telas
   (saldos, gastos por categoria, histórico mensal, transações, orçamentos, cartões, previsão, Posso gastar?, renda,
   recorrências, fixas × variáveis). Conversas guardadas e apagáveis, teto de gasto mensal e borrão no modo "ocultar
@@ -106,6 +109,8 @@ o do Playwright, aponte `PW_CHROMIUM_PATH`.
 | `AGENT_MODEL`                               | não                    | Modelo do assistente. Padrão `claude-opus-5-5`.                                                                       |
 | `AGENT_MONTHLY_BUDGET_USD`                  | não                    | Teto de gasto mensal do assistente em dólares (padrão 10). Ao atingir, ele pausa até o dia 1º.                        |
 | `AI_FAKE`                                   | não                    | `true` = IA falsa e determinística (dev/E2E, sem custo).                                                              |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`    | para notificações      | Chaves do Web Push (`npx web-push generate-vapid-keys`). Sem elas, os alertas ficam só na tela Alertas.               |
+| `VAPID_SUBJECT`                             | não                    | Contato do remetente das notificações (`mailto:...`).                                                                 |
 
 ## Deploy na Vercel (plano Hobby)
 

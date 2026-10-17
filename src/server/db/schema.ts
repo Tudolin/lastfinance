@@ -856,3 +856,35 @@ export const netWorthSnapshot = pgTable('net_worth_snapshot', {
   breakdown: jsonb('breakdown'),
   ...timestamps,
 });
+
+// ───────────────────────── Fase 5: alertas ─────────────────────────
+
+/** Inscrições de Web Push (um registro por navegador/celular). */
+export const pushSubscription = pgTable('push_subscription', {
+  id: id(),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  userAgent: text('user_agent'),
+  lastSuccessAt: ts('last_success_at'),
+  failures: integer('failures').notNull().default(0),
+  ...timestamps,
+});
+
+/** Alertas gerados (caixa de entrada). `dedupeKey` impede repetir o mesmo aviso. */
+export const alertEvent = pgTable(
+  'alert_event',
+  {
+    id: id(),
+    type: text('type').notNull(),
+    dedupeKey: text('dedupe_key').notNull().unique(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    url: text('url'),
+    /** Quando foi enviado por push (null = pendente, por exemplo no horário de silêncio). */
+    sentAt: ts('sent_at'),
+    readAt: ts('read_at'),
+    ...timestamps,
+  },
+  (t) => [index('alert_event_created_idx').on(t.createdAt)],
+);
