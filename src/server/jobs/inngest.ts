@@ -7,6 +7,7 @@ import { aiBatchData, itemSyncData, webhookReceivedData } from './events';
 import { applyBatchJob } from '@/server/services/categorize';
 import { handle } from './handlers';
 import type { JobStep } from './step';
+import { stripsBranchEnvHeader } from './inngest-diag';
 
 /** Nossos passos só retornam dados já serializáveis em JSON, então o tipo "Jsonify" do Inngest é o próprio T. */
 function asJobStep(step: {
@@ -18,8 +19,18 @@ function asJobStep(step: {
 /** Valor colado na Vercel com espaço ou quebra de linha vira 404 no envio e assinatura inválida. */
 const clean = (v: string | undefined) => v?.trim() || undefined;
 
+const stripEnvHeader = stripsBranchEnvHeader();
+
+const inngestFetch: typeof fetch = (input, init) => {
+  if (!stripEnvHeader || !init?.headers) return fetch(input, init);
+  const headers = new Headers(init.headers);
+  headers.delete('x-inngest-env');
+  return fetch(input, { ...init, headers });
+};
+
 export const inngest = new Inngest({
   id: 'lastfinance',
+  fetch: inngestFetch,
   eventKey: clean(process.env.INNGEST_EVENT_KEY),
   signingKey: clean(process.env.INNGEST_SIGNING_KEY),
   signingKeyFallback: clean(process.env.INNGEST_SIGNING_KEY_FALLBACK),
