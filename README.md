@@ -98,7 +98,7 @@ o do Playwright, aponte `PW_CHROMIUM_PATH`.
    `DATABASE_URL` e `DATABASE_URL_UNPOOLED` para cada ambiente. Ative o point-in-time recovery do Neon.
 3. **Fila:** Marketplace → **Inngest** → conecte. Ela cria `INNGEST_EVENT_KEY`/`INNGEST_SIGNING_KEY` e sincroniza o endpoint
    `/api/inngest` a cada deploy. As funções: `process-pluggy-webhook`, `sync-pluggy-item` (1 por item por vez, com debounce)
-   e `fallback-sync` (a cada 6 h, horário de Brasília).
+   `fallback-sync` (a cada 6 h, horário de Brasília) e `daily-bank-refresh` (5h de Brasília).
 4. **Variáveis:** em Settings → Environment Variables, cadastre as da tabela acima **separadas por ambiente**
    (Production × Preview). Em Preview, use `PLUGGY_FAKE=true` ou credenciais de teste.
 5. **Cron:** `vercel.json` agenda `/api/cron/fallback` 1×/dia (limite do Hobby). É só um despertador redundante; o
@@ -153,6 +153,8 @@ do mesmo item, então o histórico e as suas edições são preservados.
 A Pluggy atualiza cada item automaticamente até 4×/dia e avisa por webhook. Transações com mais de 6 dias são
 reatualizadas só 1×/semana, faturas e lista de investimentos 1×/dia. O botão **Sincronizar** relê o que a Pluggy já tem
 (grátis); **Atualizar no banco** pede uma coleta nova e gasta cota mensal — por isso é limitado a 1×/hora por instituição.
+Como a atualização automática da Pluggy nem sempre acontece todo dia, a função `daily-bank-refresh` pede, às 5h, uma
+coleta nova dos itens que a Pluggy não atualizou nas últimas 20 h (no máximo 1×/dia por item).
 
 ## Categorização com IA (Claude Haiku)
 

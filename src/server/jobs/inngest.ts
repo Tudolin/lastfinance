@@ -5,6 +5,7 @@ import { getDb, schema } from '@/server/db/client';
 import { isNull } from 'drizzle-orm';
 import { aiBatchData, itemSyncData, webhookReceivedData } from './events';
 import { applyBatchJob } from '@/server/services/categorize';
+import { refreshStaleItems } from '@/server/services/item-refresh';
 import { handle } from './handlers';
 import type { JobStep } from './step';
 import { stripsBranchEnvHeader } from './inngest-diag';
@@ -101,6 +102,15 @@ export const fallbackSyncFn = inngest.createFunction(
 );
 
 /**
+ * Uma vez por dia, de madrugada, pede à Pluggy uma coleta nova dos itens que ela não atualizou nas
+ * últimas 20 h. Os dados chegam pelo webhook `item/updated`; o fallback das 6 h cobre aviso perdido.
+ */
+export const dailyRefreshFn = inngest.createFunction(
+  { id: 'daily-bank-refresh', triggers: [{ cron: 'TZ=America/Sao_Paulo 0 5 * * *' }] },
+  async ({ step }) => step.run('request-updates', () => refreshStaleItems()),
+);
+
+/**
  * Carga histórica de categorização via Message Batches (50% mais barato): espera o lote terminar
  * (normalmente < 1 h, no máximo 24 h) com sleeps duráveis e aplica os resultados.
  */
@@ -116,4 +126,10 @@ export const applyAiBatchFn = inngest.createFunction(
   },
 );
 
-export const functions = [processWebhookFn, itemSyncFn, fallbackSyncFn, applyAiBatchFn];
+export const functions = [
+  processWebhookFn,
+  itemSyncFn,
+  fallbackSyncFn,
+  dailyRefreshFn,
+  applyAiBatchFn,
+];

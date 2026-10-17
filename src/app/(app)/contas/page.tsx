@@ -114,8 +114,8 @@ export default async function AccountsPage() {
                   <SyncButtons pluggyItemId={c.pluggyItemId} />
                 )}
                 <span className="text-xs text-ink-2">
-                  “Atualizar no banco” usa a cota mensal do Open Finance. A Pluggy já atualiza
-                  sozinha até 4 vezes por dia.
+                  “Atualizar no banco” usa a cota mensal do Open Finance. O app já pede uma
+                  atualização todo dia às 5h.
                 </span>
               </Card>
             );
