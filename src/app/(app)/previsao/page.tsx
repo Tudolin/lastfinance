@@ -40,6 +40,13 @@ export default async function ForecastPage({
   const byDay = new Map<string, typeof v.upcoming>();
   for (const e of v.upcoming.slice(0, 60)) byDay.set(e.day, [...(byDay.get(e.day) ?? []), e]);
   const hasPlan = v.upcoming.some((e) => e.kind === 'income');
+  // Último dia negativo da primeira sequência e o dia em que o saldo volta ao positivo.
+  const firstNeg = v.base.firstNegative;
+  const negStart = firstNeg ? v.daily.findIndex((d) => d.date === firstNeg) : -1;
+  const backIdx = negStart >= 0 ? v.daily.findIndex((d, i) => i > negStart && d.balance >= 0) : -1;
+  const recovery = backIdx > 0 ? v.daily[backIdx]! : null;
+  const lastNeg = backIdx > 0 ? v.daily[backIdx - 1]! : null;
+  const shortfall = Math.max(0, v.reserveCents - v.free.minBalance);
 
   return (
     <>
@@ -83,7 +90,13 @@ export default async function ForecastPage({
             ? `Seus gastos previstos cabem no seu dinheiro pelos próximos ${days} dias.`
             : verdict === 'warn'
               ? 'Cabe, mas o saldo encosta na sua reserva mínima.'
-              : `O saldo previsto fica negativo${v.base.firstNegative ? ` a partir de ${formatBR(v.base.firstNegative)}` : ''}.`}
+              : !firstNeg
+                ? 'O saldo previsto fica negativo.'
+                : !recovery
+                  ? `O saldo previsto fica negativo a partir de ${formatBR(firstNeg)} e não volta ao positivo no período.`
+                  : lastNeg && lastNeg.date !== firstNeg
+                    ? `O saldo previsto fica negativo de ${formatBR(firstNeg)} a ${formatBR(lastNeg.date as LocalDate)} e volta ao positivo em ${formatBR(recovery.date as LocalDate)}.`
+                    : `O saldo previsto fica negativo em ${formatBR(firstNeg)} e volta ao positivo em ${formatBR(recovery.date as LocalDate)}.`}
         </p>
         <p className="text-sm font-semibold">
           Menor saldo previsto: <Money cents={v.base.min.balance} className="font-extrabold" /> em{' '}
@@ -96,15 +109,32 @@ export default async function ForecastPage({
         <Card className="flex flex-col gap-1 p-4">
           <span className="text-[13px] font-semibold text-ink-2">Saldo hoje</span>
           <Money cents={v.startBalance} className="text-xl font-extrabold" />
-          <span className="text-xs text-ink-2">
-            {v.cashAccounts.map((a) => a.name).join(' · ')}
-          </span>
+          <ul className="flex flex-col gap-0.5 text-xs text-ink-2">
+            {v.cashAccounts.map((a) => (
+              <li key={a.id} className="flex items-baseline gap-2">
+                <span className="line-clamp-2 min-w-0 flex-1 break-words" title={a.name}>
+                  {a.name}
+                </span>
+                <Money cents={a.balanceCents} />
+              </li>
+            ))}
+          </ul>
         </Card>
         <Card className="flex flex-col gap-1 p-4">
           <span className="text-[13px] font-semibold text-ink-2">Livre para gastar por dia</span>
           <Money cents={v.free.cents} className="text-xl font-extrabold" />
           <span className="text-xs text-ink-2">
-            até {formatBR(v.free.until)} ({v.free.days} dias), mantendo a reserva
+            {v.free.cents === 0 && shortfall > 0 ? (
+              <>
+                faltam <Money cents={shortfall} className="font-bold" /> para manter a reserva de{' '}
+                <Money cents={v.reserveCents} /> até {formatBR(v.free.until)}
+              </>
+            ) : (
+              <>
+                até {formatBR(v.free.until)} ({v.free.days} dias), mantendo a reserva de{' '}
+                <Money cents={v.reserveCents} />
+              </>
+            )}
           </span>
         </Card>
         <Card className="flex flex-col gap-1 p-4">
@@ -119,7 +149,7 @@ export default async function ForecastPage({
           <span className="text-[13px] font-semibold text-ink-2">Dias no negativo</span>
           <span className="text-xl font-extrabold">{v.base.negativeDays}</span>
           <span className="text-xs text-ink-2">
-            no conservador: {v.conservative.negativeDays} · pior faixa{' '}
+            no conservador: {v.conservative.negativeDays} · pior caso{' '}
             <Money cents={v.base.minLow.balance} />
           </span>
         </Card>

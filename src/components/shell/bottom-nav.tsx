@@ -12,7 +12,7 @@ export function BottomNav() {
   const moreActive = !items.some((i) => isActive(pathname, i.href));
   const cls = (active: boolean) =>
     cn(
-      'flex min-h-12 flex-col items-center justify-center gap-1 text-[11px] font-bold no-underline',
+      'flex min-h-12 min-w-0 flex-col items-center justify-start gap-1 text-center text-[11px] leading-tight font-bold no-underline',
       active ? 'text-primary-on-soft' : 'text-ink-2',
     );
   return (
@@ -27,12 +27,12 @@ export function BottomNav() {
           className={cls(isActive(pathname, i.href))}
           aria-current={isActive(pathname, i.href) ? 'page' : undefined}
         >
-          <i.icon className="size-[22px]" aria-hidden="true" />
+          <i.icon className="size-[22px] shrink-0" aria-hidden="true" />
           {i.label}
         </Link>
       ))}
       <Link href="/mais" className={cls(moreActive)}>
-        <Ellipsis className="size-[22px]" aria-hidden="true" />
+        <Ellipsis className="size-[22px] shrink-0" aria-hidden="true" />
         Mais
       </Link>
     </nav>

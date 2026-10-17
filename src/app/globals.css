@@ -101,6 +101,13 @@
     color: var(--link);
   }
 
+  /* Um <select> cresce até a opção mais longa (ex.: nome de conta da Pluggy) e alarga a página no
+     celular, o que faz a barra inferior "fugir" da tela. */
+  select {
+    max-width: 100%;
+    text-overflow: ellipsis;
+  }
+
   :focus-visible {
     outline: 2px solid var(--link);
     outline-offset: 2px;

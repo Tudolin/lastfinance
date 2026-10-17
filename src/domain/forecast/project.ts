@@ -93,7 +93,7 @@ export function project(input: ProjectionInput): Projection {
       cents: -Math.round(c.cents * factor),
       pessimisticCents: -Math.round(c.cents * factor * 1.15),
       optimisticCents: -Math.round(c.cents * factor * 0.9),
-      label: 'Gasto variável no cartão (estimado)',
+      label: 'Gasto variável no cartão',
       kind: 'bill',
       estimated: true,
     });
