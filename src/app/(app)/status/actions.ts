@@ -4,6 +4,7 @@ import { requireUnlocked } from '@/server/auth/request';
 import { dispatchReason } from '@/server/jobs/dispatch';
 import { probeEventApi, type ProbeResult } from '@/server/jobs/inngest-diag';
 import { log } from '@/server/log';
+import { registerWebhook, type WebhookStatus } from '@/server/services/pluggy-webhook';
 
 export type PingResult =
   | { ok: true; id: string | null; probes: ProbeResult[] }
@@ -27,5 +28,26 @@ export async function pingInngestAction(): Promise<PingResult> {
   } catch (err) {
     const reason = dispatchReason(err);
     return { ok: false, error: `${reason.text} [${reason.code}]`, probes };
+  }
+}
+
+export type WebhookResult = { ok: true; status: WebhookStatus } | { ok: false; error: string };
+
+/** Registra o webhook global da Pluggy apontando para este deploy. */
+export async function registerPluggyWebhookAction(): Promise<WebhookResult> {
+  await requireUnlocked();
+  try {
+    const status = await registerWebhook();
+    log.info('pluggy webhook registrado');
+    return { ok: true, status };
+  } catch (err) {
+    log.error('pluggy webhook falhou', err);
+    const msg = err instanceof Error ? err.message : '';
+    return {
+      ok: false,
+      error: msg.includes('PLUGGY_WEBHOOK_SECRET')
+        ? 'Defina PLUGGY_WEBHOOK_SECRET na Vercel e faça um novo deploy.'
+        : 'A Pluggy recusou o registro. Confira PLUGGY_CLIENT_ID e PLUGGY_CLIENT_SECRET.',
+    };
   }
 }

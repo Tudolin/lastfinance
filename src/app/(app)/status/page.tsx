@@ -5,7 +5,9 @@ import { getSyncLogs } from '@/server/queries/accounts';
 import { recentWebhookEvents } from '@/server/services/webhooks';
 import { requireUnlocked } from '@/server/auth/request';
 import { inngestDiagnostics, type KeyInfo } from '@/server/jobs/inngest-diag';
+import { getWebhookStatus, type WebhookStatus } from '@/server/services/pluggy-webhook';
 import { InngestPing } from './inngest-ping';
+import { WebhookRegister } from './webhook-register';
 
 export const metadata = { title: 'Status da sincronização' };
 
@@ -48,6 +50,7 @@ export default async function StatusPage() {
   await requireUnlocked();
   const [logs, events] = await Promise.all([getSyncLogs(50), recentWebhookEvents(30)]);
   const diag = inngestDiagnostics();
+  const webhook: WebhookStatus | null = await getWebhookStatus().catch(() => null);
   const diagRows: [string, string][] = [
     [
       'Deploy',
@@ -126,11 +129,50 @@ export default async function StatusPage() {
           </dl>
           <InngestPing />
         </Card>
+        <Card className="flex flex-col gap-3">
+          <CardTitle>Avisos da Pluggy (webhook)</CardTitle>
+          <p className="text-[13px] text-ink-2">
+            A Pluggy atualiza suas contas sozinha algumas vezes por dia e avisa o app por este
+            webhook. Sem ele, o app só busca novidades na rotina de reserva (a cada 6 horas).
+          </p>
+          {webhook ? (
+            <dl className="grid grid-cols-1 gap-y-2 text-[13px] sm:grid-cols-[auto_1fr] sm:gap-x-4">
+              <div className="contents">
+                <dt className="font-semibold text-ink-2">Situação</dt>
+                <dd className="flex items-center gap-1.5">
+                  <Dot status={webhook.registered ? 'success' : 'error'} />
+                  {webhook.registered ? 'registrado' : 'não registrado para este endereço'}
+                </dd>
+              </div>
+              <div className="contents">
+                <dt className="font-semibold text-ink-2">Endereço</dt>
+                <dd className="font-mono text-xs break-all">{webhook.expectedUrl}</dd>
+              </div>
+              {webhook.others.length ? (
+                <div className="contents">
+                  <dt className="font-semibold text-ink-2">Outros (serão trocados)</dt>
+                  <dd className="font-mono text-xs break-all">{webhook.others.join(', ')}</dd>
+                </div>
+              ) : null}
+              {!webhook.secretSet ? (
+                <div className="contents">
+                  <dt className="font-semibold text-ink-2">PLUGGY_WEBHOOK_SECRET</dt>
+                  <dd className="text-xs text-danger-ink dark:text-danger">ausente</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : (
+            <p className="text-sm text-danger-ink dark:text-danger">
+              Não consegui consultar a Pluggy agora.
+            </p>
+          )}
+          <WebhookRegister registered={webhook?.registered ?? false} />
+        </Card>
         <Card className="flex flex-col gap-2">
           <CardTitle>Webhooks recebidos</CardTitle>
           {events.length === 0 ? (
             <p className="text-sm text-ink-2">
-              Nenhum evento ainda. Veja no README como registrar o webhook na Pluggy.
+              Nenhum evento ainda. Registre o webhook no quadro ao lado.
             </p>
           ) : null}
           <ul className="flex flex-col">
