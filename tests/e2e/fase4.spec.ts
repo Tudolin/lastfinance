@@ -60,3 +60,29 @@ test('assistente responde sobre a reserva', async ({ page }) => {
   await chat.getByLabel('Sua pergunta').press('Enter');
   await expect(chat.locator('[data-role="answer"]').first()).toContainText('Investido');
 });
+
+test('relatório do mês, visão anual e exportação CSV', async ({ page }) => {
+  await loginWithPassword(page);
+  await page.goto('/relatorios');
+  await ready(page);
+  await expect(page.getByTestId('report-expense')).toContainText('R$');
+  await expect(page.getByRole('region', { name: 'Gastos por categoria' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Período anterior' }).click();
+  await expect(page).toHaveURL(/\/relatorios\?m=\d{4}-\d{2}/);
+
+  const download = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Exportar CSV' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^transacoes_\d{4}-\d{2}-01_\d{4}-\d{2}-\d{2}\.csv$/);
+  const chunks: Buffer[] = [];
+  for await (const c of (await file.createReadStream())!) chunks.push(c as Buffer);
+  const csv = Buffer.concat(chunks).toString('utf8');
+  expect(csv.startsWith('﻿Data;Data da compra;Descrição;Valor')).toBe(true);
+  expect(csv.split('\r\n').length).toBeGreaterThan(3);
+
+  await page.getByRole('link', { name: 'Ano', exact: true }).click();
+  await expect(page).toHaveURL(/\/relatorios\/anual/);
+  await expect(page.getByTestId('year-expense')).toContainText('R$');
+  await expect(page.getByRole('region', { name: 'Mês a mês' })).toContainText('Total');
+});

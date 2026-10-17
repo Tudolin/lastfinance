@@ -22,6 +22,9 @@ Plano completo, schema e fases em [`docs/PLANO.md`](docs/PLANO.md).
   × poupança e aporte necessário para um alvo. CDI e Selic do Banco Central (SGS 12/11/432) num job diário.
   **Patrimônio**: contas + investimentos − fatura aberta, com retrato diário e evolução de 12 meses. **Assinaturas**:
   total mensal/anual, aumentos de preço, novas e paradas. O assistente consulta tudo isso.
+- **Relatórios** — relatório do mês (receitas, gastos, sobra e aplicado × mês anterior, % guardado × meta, categorias
+  com variação, maiores gastos, orçamentos estourados), visão anual mês a mês com categorias, e exportação das transações
+  em CSV (`;`, vírgula decimal, UTF-8 com BOM: abre direto no Excel e no Planilhas).
 - **6 (parte 1)** — **Assistente**: chat em português com streaming, que responde consultando as mesmas consultas das telas
   (saldos, gastos por categoria, histórico mensal, transações, orçamentos, cartões, previsão, Posso gastar?, renda,
   recorrências, fixas × variáveis). Conversas guardadas e apagáveis, teto de gasto mensal e borrão no modo "ocultar
