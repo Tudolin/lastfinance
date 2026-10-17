@@ -30,6 +30,7 @@ import {
 } from '@/server/queries/forecast';
 import { getIncomeView, getPlannedView, getRecurringView } from '@/server/queries/income';
 import { getBudgets, getCardsOverview, getNatureAnalysis } from '@/server/queries/planning';
+import { getMonthlyReport } from '@/server/queries/reports';
 import { simulateScenario } from '@/server/queries/scenarios';
 import { getSavingsView, getSubscriptionsView, getWealthView } from '@/server/queries/wealth';
 import { listTransactions, summarize } from '@/server/queries/transactions';
@@ -626,6 +627,22 @@ export const TOOLS = [
         ...end,
         savingsAccountCents: savings,
         requiredMonthlyCents: i.target ? requiredMonthly(toCents(i.target), base) : undefined,
+      };
+    },
+  }),
+  tool({
+    name: 'get_month_report',
+    label: 'Montando o relatório do mês',
+    description:
+      'Relatório de um mês (competência): receitas, gastos, sobra e aplicado comparados com o mês anterior, % da renda guardada × meta, gastos por categoria com a variação, os 5 maiores gastos, orçamentos estourados e variação do patrimônio. Use para "como foi meu mês", "resumo de setembro".',
+    input: z.object({ month: month.optional().describe('Padrão: mês atual') }),
+    run: async ({ month: m }) => {
+      const r = await getMonthlyReport(m ? localDate(`${m}-01`) : startOfMonth(todaySP()));
+      return {
+        ...r,
+        savingsRate: pct(r.savingsRate),
+        savingsGoal: pct(r.savingsGoal),
+        categories: r.categories.slice(0, 15),
       };
     },
   }),
