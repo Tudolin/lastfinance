@@ -30,6 +30,17 @@ export function ChatClient({
   const router = useRouter();
   const [items, setItems] = useState<ChatItem[]>(initial);
   const [convId, setConvId] = useState(conversationId);
+  // Trocou de conversa pela lista (ou "Nova conversa"): recomeça com o que veio do servidor.
+  // Quando a mudança é a conversa que acabamos de criar, mantém o estado local (pode haver resposta
+  // chegando).
+  const [prevProp, setPrevProp] = useState(conversationId);
+  if (conversationId !== prevProp) {
+    setPrevProp(conversationId);
+    if (conversationId !== convId) {
+      setConvId(conversationId);
+      setItems(initial);
+    }
+  }
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -119,7 +130,11 @@ export function ChatClient({
   }
 
   return (
-    <Card className="flex min-h-[60vh] flex-col gap-4 p-4" aria-label="Conversa com o assistente">
+    <Card
+      className="flex min-h-[60vh] flex-col gap-4 p-4"
+      aria-label="Conversa com o assistente"
+      aria-busy={busy}
+    >
       <div className="flex flex-1 flex-col gap-4" aria-live="polite">
         {items.length === 0 ? (
           <div className="flex flex-col gap-3">

@@ -15,6 +15,7 @@ test('assistente responde consultando os dados e guarda a conversa', async ({ pa
   await expect(first).toContainText('Somando gastos por categoria');
   await expect(first).toContainText(/Onde você mais gastou|Não encontrei gastos/);
   await expect(page).toHaveURL(/\/assistente\?c=/);
+  await expect(chat).toHaveAttribute('aria-busy', 'false');
 
   await chat.getByLabel('Sua pergunta').fill('Qual é o meu saldo?');
   await chat.getByLabel('Sua pergunta').press('Enter');
@@ -26,11 +27,12 @@ test('assistente responde consultando os dados e guarda a conversa', async ({ pa
     'Quanto gastei este mês?',
   );
 
+  const id = new URL(page.url()).searchParams.get('c')!;
+  const link = page.getByRole('region', { name: 'Conversas' }).locator(`a[href$="${id}"]`);
+  await expect(link).toHaveCount(1);
   await page.getByRole('button', { name: 'Apagar esta conversa' }).click();
   await page.waitForURL((u) => u.pathname === '/assistente' && !u.search);
-  await expect(page.getByRole('region', { name: 'Conversas' })).not.toContainText(
-    'Quanto gastei este mês?',
-  );
+  await expect(link).toHaveCount(0);
 });
 
 test('cenários: Price × SAC com CET e impacto no caixa', async ({ page }) => {
