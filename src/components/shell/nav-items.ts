@@ -2,6 +2,7 @@ import {
   ArrowLeftRight,
   Bot,
   Briefcase,
+  Calculator,
   CircleHelp,
   CreditCard,
   Home,
@@ -32,6 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/renda', label: 'Renda', icon: Briefcase },
   { href: '/recorrencias', label: 'Recorrências', icon: Repeat },
   { href: '/planejados', label: 'Gastos planejados', icon: ShoppingBag },
+  { href: '/cenarios', label: 'Cenários', icon: Calculator },
   { href: '/assistente', label: 'Assistente', icon: Bot },
   { href: '/contas', label: 'Contas conectadas', icon: Landmark },
 ];

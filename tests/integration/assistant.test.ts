@@ -96,12 +96,50 @@ describe('assistente', () => {
       get_spending_by_category: { from: `${today.slice(0, 7)}-01`, to: today },
       can_i_spend: { amount: 300 },
       search_transactions: { text: 'ifood' },
+      simulate_financing: {
+        assetPrice: 70000,
+        downPayment: 10000,
+        monthlyRatePct: 1.5,
+        months: 48,
+      },
+      simulate_scenario: {
+        changes: [
+          {
+            type: 'financing',
+            assetPrice: 70000,
+            downPayment: 10000,
+            monthlyRatePct: 1.5,
+            months: 48,
+            contractDate: today,
+          },
+          { type: 'recurring', amount: 350, start: today, label: 'Seguro do carro' },
+        ],
+      },
     };
     for (const t of TOOLS) {
       const r = await runTool(t.name, inputs[t.name] ?? {});
       expect(r.isError, `${t.name}: ${r.content}`).toBe(false);
       expect(r.content).not.toMatch(/Cents"/);
     }
+  });
+
+  it('cenário do carro piora o menor saldo e devolve o cronograma', async () => {
+    const r = await runTool('simulate_scenario', {
+      changes: [
+        {
+          type: 'financing',
+          assetPrice: 70000,
+          downPayment: 10000,
+          monthlyRatePct: 1.5,
+          months: 48,
+          contractDate: todaySP(),
+        },
+      ],
+    });
+    const data = JSON.parse(r.content);
+    expect(data.after.min.balance).toBeLessThan(data.before.min.balance);
+    expect(data.financings[0].months).toBe(48);
+    expect(data.financings[0].cetMonthly).toMatch(/%$/);
   });
 
   it('entrada inválida volta como erro para a IA, sem exceção', async () => {

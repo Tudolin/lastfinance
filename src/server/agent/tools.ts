@@ -12,6 +12,8 @@ import {
   type LocalDate,
 } from '@/domain/dates/local-date';
 import { toCents } from '@/domain/money';
+import { scenarioChangeSchema } from '@/domain/scenarios/changes';
+import { simulateFinancing, type FinancingResult } from '@/domain/scenarios/financing';
 import { foldText } from '@/domain/text/normalize';
 import { getBalances, getOpenBills } from '@/server/queries/accounts';
 import { categoryBreakdown, getCategories } from '@/server/queries/categories';
@@ -22,6 +24,7 @@ import {
 } from '@/server/queries/forecast';
 import { getIncomeView, getPlannedView, getRecurringView } from '@/server/queries/income';
 import { getBudgets, getCardsOverview, getNatureAnalysis } from '@/server/queries/planning';
+import { simulateScenario } from '@/server/queries/scenarios';
 import { listTransactions, summarize } from '@/server/queries/transactions';
 
 /**
@@ -52,6 +55,37 @@ type ToolDef<S extends z.ZodType> = {
 };
 
 const tool = <S extends z.ZodType>(t: ToolDef<S>) => t;
+
+const pct = (x: number | null) => (x == null ? null : `${(x * 100).toFixed(2)}%`);
+
+/** Resumo de um financiamento para a IA (sem a tabela inteira). */
+function financingSummary(f: FinancingResult) {
+  const pick = (i: number) => f.installments[i];
+  return {
+    system: f.system,
+    financedCents: f.financedCents,
+    iofCents: f.iofCents,
+    feesCents: f.feesCents,
+    months: f.installments.length,
+    firstPaymentCents: f.firstPaymentCents,
+    lastPaymentCents: f.lastPaymentCents,
+    totalPaidCents: f.totalPaidCents,
+    totalInterestCents: f.totalInterestCents,
+    totalInsuranceCents: f.totalInsuranceCents,
+    cetMonthly: pct(f.cetMonthly),
+    cetAnnual: pct(f.cetAnnual),
+    firstDueDate: pick(0)?.date,
+    lastDueDate: f.installments.at(-1)?.date,
+    sample: [pick(0), pick(1), pick(11), f.installments.at(-1)]
+      .filter((x) => x != null)
+      .map((x) => ({
+        n: x.n,
+        date: x.date,
+        paymentCents: x.paymentCents,
+        balanceCents: x.balanceCents,
+      })),
+  };
+}
 
 async function resolveCategory(nameOrSlug: string) {
   const cats = await getCategories();
@@ -402,6 +436,83 @@ export const TOOLS = [
             trend3: g.stats.trend3,
             shareOfIncome: g.shareOfIncome,
           })),
+      };
+    },
+  }),
+  tool({
+    name: 'simulate_financing',
+    label: 'Calculando o financiamento',
+    description:
+      'Calcula um financiamento (veículo, imóvel, empréstimo) nas tabelas Price e SAC lado a lado: parcela inicial e final, total pago, juros, IOF de pessoa física, seguro, tarifas e CET ao mês e ao ano. Não olha o caixa; para saber se cabe no orçamento, use também simulate_scenario.',
+    input: z.object({
+      assetPrice: z.number().positive().describe('Preço do bem, em reais'),
+      downPayment: z.number().min(0).default(0).describe('Entrada, em reais'),
+      monthlyRatePct: z.number().min(0).max(20).describe('Juros ao mês, em % (ex.: 1.69)'),
+      months: z.number().int().min(1).max(420),
+      contractDate: date.optional().describe('Padrão: hoje'),
+      insuranceMonthlyPct: z.number().min(0).max(2).optional(),
+      fees: z.number().min(0).optional().describe('Tarifas, em reais'),
+      iof: z.boolean().default(true),
+    }),
+    run: async (i) => {
+      const base = {
+        principalCents: toCents(i.assetPrice - i.downPayment),
+        monthlyRatePct: i.monthlyRatePct,
+        months: i.months,
+        contractDate: (i.contractDate ?? todaySP()) as LocalDate,
+        insuranceMonthlyPct: i.insuranceMonthlyPct,
+        feesCents: i.fees ? toCents(i.fees) : 0,
+        iof: i.iof,
+      };
+      if (base.principalCents <= 0) return { error: 'A entrada cobre o preço inteiro.' };
+      return {
+        downPaymentCents: toCents(i.downPayment),
+        price: financingSummary(simulateFinancing({ ...base, system: 'price' })),
+        sac: financingSummary(simulateFinancing({ ...base, system: 'sac' })),
+      };
+    },
+  }),
+  tool({
+    name: 'simulate_scenario',
+    label: 'Simulando o cenário no caixa',
+    description:
+      'Aplica mudanças hipotéticas à previsão de caixa dos próximos meses e compara com a previsão atual: menor saldo, saldo final, dias negativos e saldo no fim de cada mês, com veredito (ok, warn, no). Tipos de mudança: one_off (gasto ou entrada pontual), recurring (mensal), financing (entrada + parcelas Price/SAC com IOF/CET), card_installments (compra parcelada no cartão, a partir do vencimento da fatura), income_change (aumento ou redução de renda mensal). Use para "e se eu financiar/comprar/trocar de emprego/assinar…". Nada é gravado.',
+    input: z.object({
+      changes: z.array(scenarioChangeSchema).min(1).max(10),
+      horizonDays: z.number().int().min(30).max(365).default(365),
+    }),
+    run: async ({ changes, horizonDays }) => {
+      const r = await simulateScenario(changes, horizonDays);
+      const b = (x: { date: string; balance: number }) => ({
+        date: x.date,
+        balanceCents: x.balance,
+      });
+      return {
+        today: r.today,
+        horizonDays: r.horizonDays,
+        verdict: r.verdict,
+        reserveCents: r.reserveCents,
+        warning: r.ignoredPastEvents
+          ? `${r.ignoredPastEvents} movimento(s) com data no passado foram ignorados`
+          : undefined,
+        before: {
+          min: b(r.before.min),
+          endCents: r.before.end,
+          negativeDays: r.before.negativeDays,
+        },
+        after: {
+          min: b(r.after.min),
+          endCents: r.after.end,
+          negativeDays: r.after.negativeDays,
+          firstNegative: r.after.firstNegative,
+        },
+        afterConservativeMin: b(r.afterConservativeMin),
+        monthEnds: r.monthEnds.map((m) => ({
+          date: m.date,
+          beforeCents: m.before,
+          afterCents: m.after,
+        })),
+        financings: r.financings.map((f) => ({ label: f.label, ...financingSummary(f) })),
       };
     },
   }),
